@@ -9,7 +9,7 @@ export default function Home() {
       
       <div className="container mx-auto px-4 py-12 sm:py-20 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight mb-6">
             Book Your Court in <span className="text-gradient">Seconds</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted max-w-2xl mx-auto">

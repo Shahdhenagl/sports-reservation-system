@@ -42,7 +42,7 @@ export function BookingFlow() {
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">What do you want to play?</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">What do you want to play?</h2>
               <p className="text-muted">Select your preferred sport and location</p>
             </div>
             
@@ -56,7 +56,7 @@ export function BookingFlow() {
                 <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
                   <Trophy className="w-8 h-8 text-primary" />
                 </div>
-                <span className="font-semibold text-lg text-white">Football</span>
+                <span className="font-semibold text-lg text-foreground">Football</span>
               </button>
               <button 
                 onClick={() => setSelectedSport('padel')}
@@ -67,7 +67,7 @@ export function BookingFlow() {
                 <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
                   <Trophy className="w-8 h-8 text-blue-500" />
                 </div>
-                <span className="font-semibold text-lg text-white">Padel</span>
+                <span className="font-semibold text-lg text-foreground">Padel</span>
               </button>
             </div>
           </div>
@@ -76,17 +76,17 @@ export function BookingFlow() {
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">When do you want to play?</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">When do you want to play?</h2>
               <p className="text-muted">Select date and time slot</p>
             </div>
             
             {/* Mock Date/Time selection */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <button className="p-4 rounded-xl border border-border bg-surface/50 text-white flex items-center justify-center gap-2 hover:border-primary transition-colors">
+              <button className="p-4 rounded-xl border border-border bg-surface/50 text-foreground flex items-center justify-center gap-2 hover:border-primary transition-colors">
                 <CalendarDays className="w-5 h-5 text-primary" />
                 Select Date
               </button>
-              <button className="p-4 rounded-xl border border-border bg-surface/50 text-white flex items-center justify-center gap-2 hover:border-primary transition-colors">
+              <button className="p-4 rounded-xl border border-border bg-surface/50 text-foreground flex items-center justify-center gap-2 hover:border-primary transition-colors">
                 <Clock className="w-5 h-5 text-primary" />
                 Select Time
               </button>
@@ -100,13 +100,13 @@ export function BookingFlow() {
         {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
              <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Your Details</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Your Details</h2>
               <p className="text-muted">How can we reach you?</p>
             </div>
             <div className="space-y-4 max-w-md mx-auto">
-              <input type="text" placeholder="Full Name" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
-              <input type="tel" placeholder="Phone Number" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
-              <textarea placeholder="Any special requests? (Optional)" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" />
+              <input type="text" placeholder="Full Name" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
+              <input type="tel" placeholder="Phone Number" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
+              <textarea placeholder="Any special requests? (Optional)" className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" />
             </div>
           </div>
         )}
@@ -114,21 +114,21 @@ export function BookingFlow() {
         {step === 4 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
              <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Payment</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Payment</h2>
               <p className="text-muted">Total: EGP 600.00</p>
             </div>
             
             <div className="max-w-md mx-auto space-y-6">
               <div className="p-6 rounded-2xl bg-surface/50 border border-primary/50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-lg">Recommended</div>
-                <h3 className="text-lg font-semibold text-white mb-2">InstaPay</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
                 <p className="text-muted text-sm mb-4">Transfer to: <strong>sportsclub@instapay</strong></p>
                 
                 <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group">
                   <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                     <Upload className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="text-sm text-white font-medium">Upload Payment Screenshot</p>
+                  <p className="text-sm text-foreground font-medium">Upload Payment Screenshot</p>
                   <p className="text-xs text-muted mt-1">JPEG, PNG up to 5MB</p>
                 </div>
               </div>
@@ -141,13 +141,13 @@ export function BookingFlow() {
             <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-12 h-12 text-primary" />
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2">Booking Requested!</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-2">Booking Requested!</h2>
             <p className="text-muted max-w-md mx-auto mb-6">
               Your request has been received and is pending admin review. We'll notify you once confirmed.
             </p>
             <div className="bg-surface/50 border border-border rounded-xl p-4 inline-block">
               <p className="text-sm text-muted mb-1">Booking Reference</p>
-              <p className="text-2xl font-mono font-bold text-white tracking-widest">BK-8X9A2</p>
+              <p className="text-2xl font-mono font-bold text-foreground tracking-widest">BK-8X9A2</p>
             </div>
           </div>
         )}
@@ -156,7 +156,7 @@ export function BookingFlow() {
       {/* Navigation Buttons */}
       <div className="mt-8 pt-6 border-t border-border flex justify-between items-center relative z-10">
         {step > 1 && step < 5 ? (
-          <button onClick={prevStep} className="px-6 py-2.5 rounded-xl font-medium text-white hover:bg-surface transition-colors">
+          <button onClick={prevStep} className="px-6 py-2.5 rounded-xl font-medium text-foreground hover:bg-surface transition-colors">
             Back
           </button>
         ) : <div />}

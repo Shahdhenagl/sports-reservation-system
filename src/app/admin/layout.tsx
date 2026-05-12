@@ -42,13 +42,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-          <span className="text-xl font-bold text-white flex items-center gap-2">
+          <span className="text-xl font-bold text-foreground flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <CalendarDays className="w-5 h-5 text-white" />
             </div>
             Admin Panel
           </span>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted hover:text-white">
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted hover:text-foreground">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -64,12 +64,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all
                   ${isActive 
                     ? 'bg-primary/10 text-primary' 
-                    : 'text-muted hover:bg-surface-hover hover:text-white'
+                    : 'text-muted hover:bg-surface-hover hover:text-foreground'
                   }
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted group-hover:text-white'}`} />
+                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted group-hover:text-foreground'}`} />
                 {item.name}
               </Link>
             );
@@ -92,11 +92,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="flex h-16 items-center justify-between border-b border-border bg-surface/50 backdrop-blur-md px-4 sm:px-6 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-muted hover:text-white"
+            className="text-muted hover:text-foreground"
           >
             <Menu className="h-6 w-6" />
           </button>
-          <span className="text-lg font-bold text-white">Admin Panel</span>
+          <span className="text-lg font-bold text-foreground">Admin Panel</span>
           <div className="w-6" /> {/* Spacer for centering */}
         </header>
 

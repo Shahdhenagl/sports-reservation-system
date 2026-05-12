@@ -3,18 +3,18 @@
 @theme {
   --color-primary: #10b981; /* Emerald 500 */
   --color-primary-hover: #059669; /* Emerald 600 */
-  --color-background: #0f172a; /* Slate 900 */
-  --color-surface: #1e293b; /* Slate 800 */
-  --color-foreground: #f8fafc; /* Slate 50 */
-  --color-muted: #94a3b8; /* Slate 400 */
-  --color-border: #334155; /* Slate 700 */
+  --color-background: #f8fafc; /* Slate 50 */
+  --color-surface: #ffffff; /* White */
+  --color-foreground: #0f172a; /* Slate 900 */
+  --color-muted: #64748b; /* Slate 500 */
+  --color-border: #e2e8f0; /* Slate 200 */
   --color-danger: #ef4444; /* Red 500 */
   --color-success: #10b981; /* Emerald 500 */
 }
 
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
@@ -26,9 +26,10 @@ body {
 
 /* Premium utility classes */
 @utility glass {
-  background-color: rgba(30, 41, 59, 0.7);
+  background-color: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 @utility text-gradient {

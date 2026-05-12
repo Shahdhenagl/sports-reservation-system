@@ -36,7 +36,7 @@ export function LoginForm() {
             name="email"
             type="email"
             required
-            className="w-full bg-surface/50 border border-border rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="w-full bg-surface/50 border border-border rounded-xl py-2.5 pl-10 pr-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             placeholder="admin@example.com"
           />
         </div>
@@ -52,7 +52,7 @@ export function LoginForm() {
             name="password"
             type="password"
             required
-            className="w-full bg-surface/50 border border-border rounded-xl py-2.5 pl-10 pr-4 text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            className="w-full bg-surface/50 border border-border rounded-xl py-2.5 pl-10 pr-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             placeholder="••••••••"
           />
         </div>
