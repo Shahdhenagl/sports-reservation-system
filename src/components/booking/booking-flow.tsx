@@ -510,6 +510,7 @@ export function BookingFlow() {
             </div>
             
             <div className="max-w-2xl mx-auto grid gap-4 sm:gap-6">
+              {/* Full Name */}
               <div className="relative group">
                 <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} transition-transform group-focus-within:scale-110 z-10`}>
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -519,19 +520,20 @@ export function BookingFlow() {
                   placeholder={t.fullName} 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-6' : 'pl-11 sm:pl-12 pr-6'} text-foreground text-base sm:text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
+                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} text-foreground text-base sm:text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
                   required
                 />
               </div>
 
-              <div className="grid gap-4 sm:gap-6">
-                <div className="space-y-1 sm:space-y-2">
+              {/* Phone Numbers */}
+              <div className="grid gap-4">
+                <div className="space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
-                  <div className="flex gap-2 relative group">
+                  <div className="flex gap-2">
                     <select 
                       value={phoneCode} 
                       onChange={(e) => setPhoneCode(e.target.value)}
-                      className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                      className="w-20 sm:w-24 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-2 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer text-center"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -545,22 +547,19 @@ export function BookingFlow() {
                       placeholder="123 456 7890" 
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      className="flex-1 min-w-0 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
                       required
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1 sm:space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.whatsappNumber}</label>
-                  <div className="flex gap-2 relative group">
-                    <div className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 flex items-center justify-center">
-                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-                    </div>
+                  <div className="flex gap-2">
                     <select 
                       value={whatsappCode} 
                       onChange={(e) => setWhatsappCode(e.target.value)}
-                      className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                      className="w-20 sm:w-24 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-2 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer text-center"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -574,13 +573,14 @@ export function BookingFlow() {
                       placeholder="123 456 7890" 
                       value={whatsappNumber}
                       onChange={(e) => setWhatsappNumber(e.target.value)}
-                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      className="flex-1 min-w-0 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
                       required
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Special Requests */}
               <div className="relative group">
                 <div className={`absolute top-4 ${direction === 'rtl' ? 'right-4' : 'left-4'} z-10`}>
                   <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-muted group-focus-within:text-primary transition-colors" />
@@ -589,7 +589,7 @@ export function BookingFlow() {
                   placeholder={t.specialRequests} 
                   value={specialRequests}
                   onChange={(e) => setSpecialRequests(e.target.value)}
-                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-6' : 'pl-11 sm:pl-12 pr-6'} py-3 sm:py-4 text-foreground text-sm sm:text-base placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[100px] sm:min-h-[120px] transition-all relative z-0`} 
+                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} py-3.5 sm:py-4 text-foreground text-sm sm:text-base placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[100px] sm:min-h-[120px] transition-all relative z-0`} 
                 />
               </div>
             </div>
@@ -841,12 +841,15 @@ export function BookingFlow() {
       </div>
 
       {/* Navigation Buttons */}
-      <div className="mt-8 pt-6 border-t border-border flex justify-between items-center relative z-10">
-        {step > 1 && step < 5 ? (
-          <button onClick={prevStep} className="px-6 py-2.5 rounded-xl font-medium text-foreground hover:bg-surface transition-colors">
+      <div className="mt-8 pt-6 border-t border-white/5 flex flex-row items-center gap-4 relative z-10">
+        {step > 1 && step < 5 && (
+          <button 
+            onClick={prevStep} 
+            className="flex-1 sm:flex-none px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-muted hover:text-foreground hover:bg-surface transition-all active:scale-95 border border-white/5"
+          >
             {t.back}
           </button>
-        ) : <div />}
+        )}
         
         {step < 5 && (
           <button 
@@ -858,7 +861,7 @@ export function BookingFlow() {
               (step === 3 && (!fullName || !phoneNumber || !whatsappNumber)) ||
               (step === 4 && !uploadedFile)
             }
-            className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}
+            className={`flex-[2] sm:flex-none px-10 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest text-white bg-primary hover:bg-primary-hover shadow-[0_20px_40px_-12px_rgba(16,185,129,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${step === 1 ? 'w-full' : ''}`}
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
