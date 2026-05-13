@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const t = translations[language];
   const supabase = createClient();
 
-  useState(() => {
+  useEffect(() => {
     async function loadClub() {
       const { data } = await (supabase.from("app_settings") as any)
         .select("app_name, club_logo_url")
@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     }
     loadClub();
-  });
+  }, []);
 
   const navigation = [
     { name: t.dashboard, href: "/admin", icon: LayoutDashboard },

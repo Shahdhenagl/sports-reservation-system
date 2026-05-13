@@ -22,7 +22,7 @@ export default function BookingsPage() {
       let query = (supabase.from("bookings") as any)
         .select(`
           *,
-          customers!inner(*)
+          customers(*)
         `)
         .order("created_at", { ascending: false });
       
@@ -34,7 +34,7 @@ export default function BookingsPage() {
       
       if (error) {
         console.error("Fetch error:", error);
-        // Fallback to simple select if join fails
+        // Fallback to simple select
         const { data: simpleData } = await (supabase.from("bookings") as any)
           .select("*")
           .order("created_at", { ascending: false });
