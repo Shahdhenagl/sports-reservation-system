@@ -1,21 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2, Gamepad2, Activity, Dumbbell, Target, Medal, Users, Flame, Swords } from "lucide-react";
+import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2, Medal, Dumbbell, Target, Bike, Waves, Swords, Flag, Crosshair, Activity } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { createClient } from "@/lib/supabase/client";
 
 const AVAILABLE_ICONS = [
   { name: "Trophy", icon: Trophy },
-  { name: "Gamepad2", icon: Gamepad2 },
-  { name: "Activity", icon: Activity },
+  { name: "Medal", icon: Medal },
   { name: "Dumbbell", icon: Dumbbell },
   { name: "Target", icon: Target },
-  { name: "Medal", icon: Medal },
-  { name: "Users", icon: Users },
-  { name: "Flame", icon: Flame },
+  { name: "Bike", icon: Bike },
+  { name: "Waves", icon: Waves },
   { name: "Swords", icon: Swords },
+  { name: "Flag", icon: Flag },
+  { name: "Crosshair", icon: Crosshair },
+  { name: "Activity", icon: Activity },
 ];
 
 type Step = 1 | 2 | 3 | 4 | 5;
