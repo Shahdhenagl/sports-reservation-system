@@ -103,19 +103,36 @@ export function BookingFlow() {
               <p className="text-muted">{t.selectDateTime}</p>
             </div>
             
-            {/* Mock Date/Time selection */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <button className="p-4 rounded-xl border border-border bg-surface/50 text-foreground flex items-center justify-center gap-2 hover:border-primary transition-colors">
-                <CalendarDays className="w-5 h-5 text-primary" />
-                {t.selectDate}
-              </button>
-              <button className="p-4 rounded-xl border border-border bg-surface/50 text-foreground flex items-center justify-center gap-2 hover:border-primary transition-colors">
-                <Clock className="w-5 h-5 text-primary" />
-                {t.selectTime}
-              </button>
-            </div>
-            <div className="p-4 rounded-xl bg-surface/30 border border-border text-center text-muted">
-              <p>{t.calendarIntegration}</p>
+            {/* Functional Date/Time selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">{t.selectDate}</label>
+                <div className="relative">
+                  <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} pointer-events-none`}>
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                  </div>
+                  <input 
+                    type="date" 
+                    value={selectedDate || ''}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">{t.selectTime}</label>
+                <div className="relative">
+                  <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} pointer-events-none`}>
+                    <Clock className="w-5 h-5 text-primary" />
+                  </div>
+                  <input 
+                    type="time" 
+                    value={selectedTime || ''}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
