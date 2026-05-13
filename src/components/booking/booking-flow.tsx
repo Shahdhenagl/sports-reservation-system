@@ -82,11 +82,11 @@ export function BookingFlow() {
   const calculateTotal = () => {
     const basePrice = selectedActivity?.base_price || 0;
     const slotsCount = selectedTimes.length || 1;
-    const durationMultiplier = selectedDuration ? (selectedDuration / 60) * slotsCount : 1;
+    // The price is per slot duration as defined by the admin
     if (selectedActivity?.pricing_type === 'per_person') {
-      return basePrice * playersCount * durationMultiplier;
+      return basePrice * playersCount * slotsCount;
     }
-    return basePrice * durationMultiplier;
+    return basePrice * slotsCount;
   };
 
   const handleSubmitBooking = async () => {
@@ -292,53 +292,68 @@ export function BookingFlow() {
         )}
 
         {step === 2 && (
-          <div className={`space-y-6 animate-in fade-in ${direction === 'rtl' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} duration-500`}>
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t.whenToPlay}</h2>
-              <p className="text-muted">{t.selectDateTime}</p>
+          <div className={`space-y-8 animate-in fade-in zoom-in-95 duration-500`}>
+            <div className="text-center">
+              <h2 className="text-3xl font-black text-foreground mb-3 tracking-tight">
+                {language === 'ar' ? 'متى تريد اللعب؟' : 'When to Play?'}
+              </h2>
+              <p className="text-muted text-lg">{t.selectDateTime}</p>
             </div>
             
-            {/* Functional Date/Time selection */}
-            <div className="space-y-6 mb-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t.selectDate}</label>
-                <div className="relative">
-                  <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} pointer-events-none`}>
-                    <CalendarDays className="w-5 h-5 text-primary" />
+            <div className="grid gap-8 max-w-4xl mx-auto">
+              {/* Date Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-foreground/80 uppercase tracking-wider px-1">{t.selectDate}</label>
+                <div className="relative group">
+                  <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} transition-transform group-focus-within:scale-110 z-10`}>
+                    <CalendarDays className="w-6 h-6 text-primary" />
                   </div>
                   <input 
                     type="date" 
                     min={todayStr}
                     value={selectedDate || ''}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
+                    className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-14 pl-6' : 'pl-14 pr-6'} text-foreground text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`}
                   />
                 </div>
               </div>
 
+              {/* Duration Options */}
               {selectedActivity?.durations_options?.length > 1 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Select Duration</label>
-                  <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-foreground/80 uppercase tracking-wider px-1">
+                    {language === 'ar' ? 'مدة الفترة' : 'Slot Duration'}
+                  </label>
+                  <div className="flex flex-wrap gap-3">
                     {selectedActivity.durations_options.map((duration: number) => (
                       <button
                         key={duration}
                         onClick={() => setSelectedDuration(duration)}
-                        className={`py-2 rounded-xl border ${selectedDuration === duration ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-surface/50 text-muted hover:border-primary/50'}`}
+                        className={`px-6 py-3 rounded-2xl border-2 transition-all font-bold ${
+                          selectedDuration === duration 
+                          ? 'border-primary bg-primary text-white shadow-xl shadow-primary/30 scale-105' 
+                          : 'border-border/50 bg-surface/30 text-muted hover:border-primary/50 hover:bg-surface/50'
+                        }`}
                       >
-                        {duration} mins
+                        {duration} {language === 'ar' ? 'دقيقة' : 'mins'}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Time Slots Grid */}
               {selectedDate && availableTimeSlots.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">
-                    {t.selectTime} {language === 'ar' ? '(يمكنك اختيار أكثر من موعد)' : '(You can select multiple)'}
-                  </label>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto p-1">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-sm font-bold text-foreground/80 uppercase tracking-wider">
+                      {t.selectTime}
+                    </label>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                      {language === 'ar' ? 'يمكنك اختيار أكثر من موعد' : 'Multi-select enabled'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-4 rounded-3xl bg-surface/20 border border-border/50 max-h-[300px] overflow-y-auto custom-scrollbar">
                     {availableTimeSlots.map((time) => {
                       const isSelected = selectedTimes.includes(time);
                       return (
@@ -351,7 +366,11 @@ export function BookingFlow() {
                               setSelectedTimes([...selectedTimes, time].sort());
                             }
                           }}
-                          className={`py-2 text-sm rounded-lg border ${isSelected ? 'border-primary bg-primary text-white font-medium shadow-md' : 'border-border bg-surface hover:border-primary/50 text-foreground transition-colors'}`}
+                          className={`py-3 text-sm font-bold rounded-xl border-2 transition-all ${
+                            isSelected 
+                            ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20 scale-105' 
+                            : 'border-border/50 bg-surface/50 hover:border-primary/50 text-foreground'
+                          }`}
                         >
                           {time}
                         </button>
@@ -361,42 +380,44 @@ export function BookingFlow() {
                 </div>
               )}
 
-              {/* Player count */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  {language === 'ar' ? 'عدد اللاعبين' : 'Number of Players'}
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="number"
-                    min={selectedActivity?.min_players || 1}
-                    max={selectedActivity?.max_players || 10}
-                    value={playersCount}
-                    onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
-                    onBlur={() => {
-                      const min = selectedActivity?.min_players || 1;
-                      const max = selectedActivity?.max_players || 10;
-                      if (playersCount < min) setPlayersCount(min);
-                      if (playersCount > max) setPlayersCount(max);
-                    }}
-                    className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
-                  />
-                  <span className="text-sm text-muted whitespace-nowrap">
-                    {selectedActivity?.min_players || 1} - {selectedActivity?.max_players || 10} {language === 'ar' ? 'مسموح' : 'allowed'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Total Preview */}
-              {selectedTimes.length > 0 && (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex justify-between items-center">
-                  <div>
-                    <p className="text-sm text-muted">{language === 'ar' ? 'الإجمالي المبدئي' : 'Estimated Total'}</p>
-                    <p className="text-xs text-muted mt-1">{selectedTimes.length} {language === 'ar' ? 'فترة' : 'slot(s)'} × {selectedDuration} {language === 'ar' ? 'دقيقة' : 'mins'}</p>
+              {/* Player Count & Pricing Summary */}
+              <div className="grid sm:grid-cols-2 gap-6 items-end mt-4">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-foreground/80 uppercase tracking-wider px-1">
+                    {language === 'ar' ? 'عدد اللاعبين' : 'Players'}
+                  </label>
+                  <div className="relative group">
+                    <Users className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} w-5 h-5 text-muted group-focus-within:text-primary transition-colors`} />
+                    <input
+                      type="number"
+                      min={selectedActivity?.min_players || 1}
+                      max={selectedActivity?.max_players || 10}
+                      value={playersCount}
+                      onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
+                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
+                    />
                   </div>
-                  <span className="text-xl font-bold text-primary">EGP {calculateTotal().toFixed(0)}</span>
                 </div>
-              )}
+
+                {selectedTimes.length > 0 && (
+                  <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20 animate-in slide-in-from-bottom-4">
+                    <div className="relative z-10 flex flex-col gap-1">
+                      <div className="flex justify-between items-center text-xs font-bold text-primary uppercase tracking-tighter">
+                        <span>{language === 'ar' ? 'الإجمالي المبدئي' : 'Estimated Total'}</span>
+                        <div className="flex gap-2">
+                          <span>{selectedTimes.length} × {selectedDuration} {language === 'ar' ? 'د' : 'm'}</span>
+                          {selectedActivity?.pricing_type === 'per_person' && <span>× {playersCount} {language === 'ar' ? 'فرد' : 'p'}</span>}
+                        </div>
+                      </div>
+                      <div className="text-4xl font-black text-primary mt-1">
+                        EGP {calculateTotal().toFixed(0)}
+                      </div>
+                    </div>
+                    {/* Decorative background element */}
+                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
