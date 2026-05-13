@@ -18,17 +18,35 @@ export default function BookingsPage() {
 
   const fetchBookings = async () => {
     setLoading(true);
-    let query = (supabase.from("bookings") as any)
-      .select("*, customers(*)")
-      .order("created_at", { ascending: false });
-    
-    if (statusFilter !== "all") {
-      query = query.eq("status", statusFilter);
+    try {
+      let query = (supabase.from("bookings") as any)
+        .select(`
+          *,
+          customers!inner(*)
+        `)
+        .order("created_at", { ascending: false });
+      
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Fetch error:", error);
+        // Fallback to simple select if join fails
+        const { data: simpleData } = await (supabase.from("bookings") as any)
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (simpleData) setBookings(simpleData);
+      } else {
+        setBookings(data || []);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setLoading(false);
     }
-    
-    const { data, error } = await query;
-    if (data) setBookings(data);
-    setLoading(false);
   };
 
   useEffect(() => {
