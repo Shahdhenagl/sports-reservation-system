@@ -572,7 +572,7 @@ export function BookingFlow() {
             
             <div className="max-w-2xl mx-auto space-y-8">
               {/* Payment Type Tabs */}
-              {appSettings?.deposit_enabled && (
+              {(appSettings?.deposit_enabled ?? true) && (
                 <div className="flex p-1.5 bg-surface/30 backdrop-blur-md rounded-2xl border border-border/50">
                   <button
                     onClick={() => setPaymentType('full')}
@@ -587,7 +587,8 @@ export function BookingFlow() {
                   <button
                     onClick={() => {
                       setPaymentType('partial');
-                      const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
+                      const minPercent = appSettings?.min_deposit_percent ?? 10;
+                      const minDeposit = calculateTotal() * (minPercent / 100);
                       setPartialAmount(minDeposit);
                     }}
                     className={`flex-1 py-3 px-6 rounded-xl font-black text-sm transition-all duration-300 ${
@@ -605,10 +606,10 @@ export function BookingFlow() {
                 <div className="space-y-3 animate-in slide-in-from-top-4">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-sm font-bold text-foreground/80 uppercase tracking-widest">
-                      {language === 'ar' ? 'قيمة العربون' : 'Deposit Value'}
+                      {language === 'ar' ? 'قيمة المبلغ الذي ستحوله' : 'Amount you will transfer'}
                     </label>
                     <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
-                      {language === 'ar' ? 'الأدنى' : 'Min'} {appSettings?.min_deposit_percent}%
+                      {language === 'ar' ? 'الحد الأدنى' : 'Min'} {appSettings?.min_deposit_percent ?? 10}%
                     </span>
                   </div>
                   <div className="relative group">
@@ -618,13 +619,17 @@ export function BookingFlow() {
                       value={partialAmount}
                       onChange={(e) => setPartialAmount(parseFloat(e.target.value) || 0)}
                       onBlur={() => {
-                        const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
+                        const minPercent = appSettings?.min_deposit_percent ?? 10;
+                        const minDeposit = calculateTotal() * (minPercent / 100);
                         if (partialAmount < minDeposit) setPartialAmount(minDeposit);
                         if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
                       }}
                       className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} text-foreground text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
                     />
                   </div>
+                  <p className="text-[10px] text-muted px-2">
+                    {language === 'ar' ? '* الحد الأدنى للعربون هو' : '* Minimum deposit is'} EGP {(calculateTotal() * ((appSettings?.min_deposit_percent ?? 10) / 100)).toFixed(0)}
+                  </p>
                 </div>
               )}
 
