@@ -16,10 +16,13 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     app_name: "Sports Booking",
     customer_service_phone: "",
+    secondary_phone: "",
+    address: "",
     instapay_id: "",
     wallet_number: "",
     deposit_enabled: true,
     min_deposit_percent: 10,
+    club_logo_url: "",
   });
 
   useEffect(() => {
@@ -33,16 +36,44 @@ export default function SettingsPage() {
         setSettings({
           app_name: data.app_name || "Sports Booking",
           customer_service_phone: data.customer_service_phone || "",
+          secondary_phone: data.secondary_phone || "",
+          address: data.address || "",
           instapay_id: data.instapay_id || "",
           wallet_number: data.wallet_number || "",
           deposit_enabled: data.deposit_enabled ?? true,
           min_deposit_percent: data.min_deposit_percent ?? 10,
+          club_logo_url: data.club_logo_url || "",
         });
       }
       setLoading(false);
     };
     loadSettings();
   }, []);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSaving(true);
+    try {
+      const fileName = `logo_${Date.now()}.${file.name.split('.').pop()}`;
+      const { data, error } = await supabase.storage
+        .from('club-assets')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicUrl } = supabase.storage
+        .from('club-assets')
+        .getPublicUrl(fileName);
+
+      setSettings({ ...settings, club_logo_url: publicUrl.publicUrl });
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -102,29 +133,79 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div className="glass rounded-2xl p-6 sm:p-8 border border-border/50 max-w-2xl space-y-6">
-        {/* General Settings */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">{t.appName}</label>
-            <input 
-              type="text" 
-              value={settings.app_name}
-              onChange={(e) => setSettings({...settings, app_name: e.target.value})}
-              className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              {language === 'ar' ? 'رقم خدمة العملاء' : 'Customer Service Phone'}
+      <div className="glass rounded-2xl p-6 sm:p-8 border border-border/50 max-w-2xl space-y-8">
+        {/* Logo Section */}
+        <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border">
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-2xl bg-surface border-2 border-dashed border-border flex items-center justify-center overflow-hidden transition-all group-hover:border-primary/50">
+              {settings.club_logo_url ? (
+                <img src={settings.club_logo_url} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <Loader2 className="w-8 h-8 text-muted animate-pulse" />
+              )}
+            </div>
+            <label className="absolute -bottom-2 -right-2 bg-primary text-white p-1.5 rounded-lg cursor-pointer shadow-lg hover:scale-110 transition-transform">
+              <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+              <Settings className="w-4 h-4" />
             </label>
-            <input 
-              type="text" 
-              value={settings.customer_service_phone}
-              onChange={(e) => setSettings({...settings, customer_service_phone: e.target.value})}
-              placeholder="+20 123 456 7890"
-              className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-            />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground">{language === 'ar' ? 'لوجو النادي' : 'Club Logo'}</h3>
+            <p className="text-sm text-muted">{language === 'ar' ? 'سيظهر اللوجو في صفحة الحجز والتقارير' : 'Logo will appear on booking page and reports'}</p>
+          </div>
+        </div>
+
+        {/* General Settings */}
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'اسم النادي' : 'Club Name'}</label>
+              <input 
+                type="text" 
+                value={settings.app_name}
+                onChange={(e) => setSettings({...settings, app_name: e.target.value})}
+                className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {language === 'ar' ? 'رقم الهاتف الأساسي' : 'Primary Phone'}
+              </label>
+              <input 
+                type="text" 
+                value={settings.customer_service_phone}
+                onChange={(e) => setSettings({...settings, customer_service_phone: e.target.value})}
+                placeholder="+20 123 456 7890"
+                className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {language === 'ar' ? 'رقم الهاتف الإضافي' : 'Secondary Phone'}
+              </label>
+              <input 
+                type="text" 
+                value={settings.secondary_phone}
+                onChange={(e) => setSettings({...settings, secondary_phone: e.target.value})}
+                placeholder="+20 000 000 0000"
+                className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {language === 'ar' ? 'العنوان بالتفصيل' : 'Detailed Address'}
+              </label>
+              <input 
+                type="text" 
+                value={settings.address}
+                onChange={(e) => setSettings({...settings, address: e.target.value})}
+                placeholder={language === 'ar' ? 'مثال: شارع النيل، المعادي' : 'e.g. Nile St, Maadi'}
+                className="w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              />
+            </div>
           </div>
         </div>
 

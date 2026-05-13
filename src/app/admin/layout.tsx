@@ -18,12 +18,29 @@ import {
 import { logoutAction } from "@/app/actions/auth";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [clubInfo, setClubInfo] = useState<{name: string, logo: string} | null>(null);
   const pathname = usePathname();
   const { language, toggleLanguage, direction } = useLanguage();
   const t = translations[language];
+  const supabase = createClient();
+
+  useState(() => {
+    async function loadClub() {
+      const { data } = await (supabase.from("app_settings") as any)
+        .select("app_name, club_logo_url")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setClubInfo({ name: data.app_name, logo: data.club_logo_url });
+      }
+    }
+    loadClub();
+  });
 
   const navigation = [
     { name: t.dashboard, href: "/admin", icon: LayoutDashboard },
@@ -49,12 +66,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         fixed inset-y-0 ${direction === 'rtl' ? 'right-0' : 'left-0'} z-50 w-64 bg-surface border-inline-end border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex lg:w-64 lg:flex-col
         ${sidebarOpen ? 'translate-x-0' : (direction === 'rtl' ? 'translate-x-full' : '-translate-x-full')}
       `}>
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-          <span className="text-xl font-bold text-foreground flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <CalendarDays className="w-5 h-5 text-white" />
-            </div>
-            {t.adminPanel}
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6 border-b border-border">
+          <span className="text-lg font-black text-foreground flex items-center gap-2 truncate">
+            {clubInfo?.logo ? (
+              <img src={clubInfo.logo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-surface-hover" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <CalendarDays className="w-5 h-5 text-white" />
+              </div>
+            )}
+            <span className="truncate">{clubInfo?.name || t.adminPanel}</span>
           </span>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted hover:text-foreground">
             <X className="w-6 h-6" />

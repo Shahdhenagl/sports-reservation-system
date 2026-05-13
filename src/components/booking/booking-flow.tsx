@@ -228,6 +228,30 @@ export function BookingFlow() {
 
   return (
     <div className="glass rounded-[2.5rem] p-6 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-white/20 relative overflow-hidden bg-white/5 backdrop-blur-2xl" dir={direction}>
+      {/* Club Header */}
+      <div className="flex flex-col items-center gap-4 mb-10 relative z-10">
+        {appSettings?.club_logo_url ? (
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-surface/50 border border-white/10 p-2 overflow-hidden shadow-2xl">
+            <img src={appSettings.club_logo_url} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Trophy className="w-8 h-8 text-primary" />
+          </div>
+        )}
+        <div className="text-center">
+          <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">
+            {appSettings?.app_name || "Sports Booking"}
+          </h1>
+          {appSettings?.address && (
+            <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-muted mt-1">
+              <MapPin className="w-3 h-3" />
+              {appSettings.address}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Decorative background glow */}
       <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
@@ -840,6 +864,30 @@ export function BookingFlow() {
             )}
           </button>
         )}
+      </div>
+
+      {/* Club Footer Info */}
+      <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-6 relative z-10">
+        <div className="flex flex-col items-center sm:items-start gap-1">
+          <p className="text-[10px] font-black text-muted uppercase tracking-widest">{language === 'ar' ? 'تواصل معنا' : 'Contact Us'}</p>
+          <div className="flex flex-wrap justify-center sm:justify-start gap-4">
+            <a href={`tel:${appSettings?.customer_service_phone}`} className="flex items-center gap-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
+              <Phone className="w-4 h-4 text-primary" />
+              {appSettings?.customer_service_phone || '+20 123 456 7890'}
+            </a>
+            {appSettings?.secondary_phone && (
+              <a href={`tel:${appSettings.secondary_phone}`} className="flex items-center gap-2 text-sm font-bold text-foreground hover:text-primary transition-colors">
+                <Phone className="w-4 h-4 text-primary" />
+                {appSettings.secondary_phone}
+              </a>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center sm:items-end gap-1">
+          <p className="text-[10px] font-black text-muted uppercase tracking-widest">{language === 'ar' ? 'جميع الحقوق محفوظة' : 'All Rights Reserved'}</p>
+          <p className="text-sm font-bold text-foreground">© {new Date().getFullYear()} {appSettings?.app_name || "Sports Booking"}</p>
+        </div>
       </div>
     </div>
   );
