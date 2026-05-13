@@ -4,6 +4,8 @@ import { Database } from "@/types/supabase";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  
+  console.log("Creating Supabase client with URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
