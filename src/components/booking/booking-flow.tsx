@@ -36,6 +36,13 @@ export function BookingFlow() {
   const [playersCount, setPlayersCount] = useState<number>(1);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
+  // Step 3 state
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+20");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappCode, setWhatsappCode] = useState("+20");
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -222,13 +229,64 @@ export function BookingFlow() {
               <h2 className="text-2xl font-bold text-foreground mb-2">{t.yourDetails}</h2>
               <p className="text-muted">{t.reachYou}</p>
             </div>
-            <div className="space-y-4 max-w-md mx-auto">
-              <input type="text" placeholder={t.fullName} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
-              <input type="tel" placeholder={t.phoneNumber} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
+              <input 
+                type="text" 
+                placeholder={t.fullName} 
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
+                required
+              />
+
+              <div className="flex gap-2">
+                <select 
+                  value={phoneCode} 
+                  onChange={(e) => setPhoneCode(e.target.value)}
+                  className={`bg-surface/50 border border-border rounded-xl py-3 px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="+20">+20</option>
+                  <option value="+966">+966</option>
+                  <option value="+971">+971</option>
+                  <option value="+965">+965</option>
+                  <option value="+974">+974</option>
+                  <option value="+973">+973</option>
+                </select>
+                <input 
+                  type="tel" 
+                  placeholder={t.phoneNumber} 
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="flex-1 bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <select 
+                  value={whatsappCode} 
+                  onChange={(e) => setWhatsappCode(e.target.value)}
+                  className={`bg-surface/50 border border-border rounded-xl py-3 px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="+20">+20</option>
+                  <option value="+966">+966</option>
+                  <option value="+971">+971</option>
+                  <option value="+965">+965</option>
+                  <option value="+974">+974</option>
+                  <option value="+973">+973</option>
+                </select>
+                <input 
+                  type="tel" 
+                  placeholder={t.whatsappNumber} 
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  className="flex-1 bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
+                  required
+                />
+              </div>
               
               {selectedActivity?.pricing_type === 'per_person' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Number of Players</label>
+                  <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'عدد اللاعبين' : 'Number of Players'}</label>
                   <div className="flex items-center gap-4">
                     <input 
                       type="number" 
@@ -236,10 +294,16 @@ export function BookingFlow() {
                       max={selectedActivity.max_players || 10}
                       value={playersCount}
                       onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
+                      onBlur={() => {
+                        const min = selectedActivity.min_players || 1;
+                        const max = selectedActivity.max_players || 10;
+                        if (playersCount < min) setPlayersCount(min);
+                        if (playersCount > max) setPlayersCount(max);
+                      }}
                       className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" 
                     />
                     <span className="text-sm text-muted whitespace-nowrap">
-                      {selectedActivity.min_players} - {selectedActivity.max_players} allowed
+                      {selectedActivity.min_players} - {selectedActivity.max_players} {language === 'ar' ? 'مسموح بهم' : 'allowed'}
                     </span>
                   </div>
                 </div>
@@ -316,7 +380,8 @@ export function BookingFlow() {
             onClick={nextStep} 
             disabled={
               (step === 1 && !selectedActivity) || 
-              (step === 2 && (!selectedDate || !selectedTime || !selectedDuration))
+              (step === 2 && (!selectedDate || !selectedTime || !selectedDuration)) ||
+              (step === 3 && (!fullName || !phoneNumber || !whatsappNumber))
             }
             className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}
           >
