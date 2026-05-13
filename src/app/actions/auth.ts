@@ -14,7 +14,7 @@ export async function loginAction(formData: FormData) {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -23,16 +23,20 @@ export async function loginAction(formData: FormData) {
       console.error("Supabase Login Error:", error.message);
       return { error: error.message };
     }
-
-    redirect("/admin");
   } catch (err: any) {
     console.error("Login Action Crash:", err);
     return { error: err.message || "An unexpected error occurred" };
   }
+
+  redirect("/admin");
 }
 
 export async function logoutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
   redirect("/admin/login");
 }
