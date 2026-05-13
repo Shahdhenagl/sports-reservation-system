@@ -71,6 +71,11 @@ export const translations = {
     transferTo: "Transfer to",
     uploadScreenshot: "Upload Payment Screenshot",
     fileTypes: "JPEG, PNG up to 5MB",
+    activities: "Activities",
+    addActivity: "Add Activity",
+    activityNameAr: "Activity Name (Arabic)",
+    activityNameEn: "Activity Name (English)",
+    iconName: "Icon Name",
   },
   ar: {
     adminPanel: "لوحة التحكم",
@@ -144,6 +149,11 @@ export const translations = {
     transferTo: "تحويل إلى",
     uploadScreenshot: "رفع صورة التحويل",
     fileTypes: "JPEG, PNG حتى 5 ميجا",
+    activities: "النشاطات",
+    addActivity: "إضافة نشاط",
+    activityNameAr: "اسم النشاط (بالعربي)",
+    activityNameEn: "اسم النشاط (بالإنجليزي)",
+    iconName: "اسم الأيقونة",
   }
 };
 

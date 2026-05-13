@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Languages
+  Languages,
+  Trophy
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navigation = [
     { name: t.dashboard, href: "/admin", icon: LayoutDashboard },
+    { name: t.activities, href: "/admin/activities", icon: Trophy },
     { name: t.bookings, href: "/admin/bookings", icon: CalendarDays },
     { name: t.resources, href: "/admin/resources", icon: MapPin },
     { name: t.settings, href: "/admin/settings", icon: Settings },

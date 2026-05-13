@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
+import { createClient } from "@/lib/supabase/client";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -12,10 +13,28 @@ export function BookingFlow() {
   const { language, direction } = useLanguage();
   const t = translations[language];
 
-  // Mock data for UI demonstration
+  // Dynamic data
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchActivities() {
+      const { data } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true });
+      
+      if (data) setActivities(data);
+      setLoading(false);
+    }
+    fetchActivities();
+  }, []);
 
   const nextStep = () => setStep((s) => Math.min(s + 1, 5) as Step);
   const prevStep = () => setStep((s) => Math.max(s - 1, 1) as Step);
@@ -50,30 +69,30 @@ export function BookingFlow() {
               <p className="text-muted">{t.selectSport}</p>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button 
-                onClick={() => setSelectedSport('football')}
-                className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${
-                  selectedSport === 'football' ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
-                }`}
-              >
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-primary" />
-                </div>
-                <span className="font-semibold text-lg text-foreground">{t.football}</span>
-              </button>
-              <button 
-                onClick={() => setSelectedSport('padel')}
-                className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${
-                  selectedSport === 'padel' ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
-                }`}
-              >
-                <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-blue-500" />
-                </div>
-                <span className="font-semibold text-lg text-foreground">{t.padel}</span>
-              </button>
-            </div>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activities.map((activity) => (
+                  <button 
+                    key={activity.id}
+                    onClick={() => setSelectedSport(activity.id)}
+                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${
+                      selectedSport === activity.id ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
+                    }`}
+                  >
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Trophy className="w-8 h-8 text-primary" />
+                    </div>
+                    <span className="font-semibold text-lg text-foreground">
+                      {language === 'ar' ? activity.name_ar : activity.name_en}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -166,7 +185,11 @@ export function BookingFlow() {
         ) : <div />}
         
         {step < 5 && (
-          <button onClick={nextStep} className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}>
+          <button 
+            onClick={nextStep} 
+            disabled={step === 1 && !selectedSport}
+            className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}
+          >
             {step === 4 ? t.submit : t.continue}
             <ChevronRight className={`w-4 h-4 ${direction === 'rtl' ? 'rotate-180' : ''}`} />
           </button>
