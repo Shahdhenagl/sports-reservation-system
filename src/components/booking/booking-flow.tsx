@@ -39,6 +39,26 @@ export function BookingFlow() {
     fetchActivities();
   }, []);
 
+  useEffect(() => {
+    if (selectedDate && selectedDuration) {
+      const slots = [];
+      const startMinutes = 8 * 60; // 08:00
+      const endMinutes = 22 * 60;  // 22:00
+      let currentMinutes = startMinutes;
+
+      while (currentMinutes <= endMinutes) {
+        const h = Math.floor(currentMinutes / 60);
+        const m = currentMinutes % 60;
+        slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        currentMinutes += selectedDuration;
+      }
+      setAvailableTimeSlots(slots);
+      setSelectedTime(null); // Reset selected time if date/duration changes
+    } else {
+      setAvailableTimeSlots([]);
+    }
+  }, [selectedDate, selectedDuration]);
+
   const nextStep = () => setStep((s) => Math.min(s + 1, 5) as Step);
   const prevStep = () => setStep((s) => Math.max(s - 1, 1) as Step);
 
@@ -97,7 +117,7 @@ export function BookingFlow() {
                       {language === 'ar' ? activity.name_ar : activity.name_en}
                     </span>
                     <div className="text-sm text-muted">
-                      {activity.pricing_type === 'per_person' ? 'Per Person' : 'Per Game'} - EGP {activity.base_price || 0}
+                      {activity.pricing_type === 'per_person' ? t.perPerson : t.perCourt} - EGP {activity.base_price || 0}
                     </div>
                   </button>
                 ))}
@@ -124,15 +144,7 @@ export function BookingFlow() {
                   <input 
                     type="date" 
                     value={selectedDate || ''}
-                    onChange={(e) => {
-                      setSelectedDate(e.target.value);
-                      // Generate mock time slots from 08:00 to 22:00
-                      const slots = [];
-                      for (let i = 8; i <= 22; i++) {
-                        slots.push(`${i.toString().padStart(2, '0')}:00`);
-                      }
-                      setAvailableTimeSlots(slots);
-                    }}
+                    onChange={(e) => setSelectedDate(e.target.value)}
                     className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
                   />
                 </div>
