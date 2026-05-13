@@ -5,7 +5,7 @@ import {
   CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, 
   Clock, Loader2, Medal, Dumbbell, Target, Bike, Waves, Swords, 
   Flag, Crosshair, Activity, Users, Phone, ExternalLink, 
-  ShieldCheck, DollarSign, CreditCard, Smartphone, MessageCircle, MessageSquare 
+  ShieldCheck, DollarSign, CreditCard, Smartphone, MessageCircle, MessageSquare, Copy
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
@@ -668,55 +668,81 @@ export function BookingFlow() {
               </div>
 
               {/* Dynamic Payment Details Card */}
-              <div className="relative overflow-hidden rounded-[2.5rem] p-10 bg-gradient-to-br from-surface/80 to-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                  <ShieldCheck className="w-32 h-32 text-primary" />
+              <div className="relative overflow-hidden rounded-3xl p-6 sm:p-10 bg-gradient-to-br from-surface/80 to-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl">
+                <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-5">
+                  <ShieldCheck className="w-24 h-24 sm:w-32 sm:h-32 text-primary" />
                 </div>
                 
-                <div className="relative z-10 space-y-8">
+                <div className="relative z-10 space-y-6 sm:space-y-8">
                   <div className="text-center space-y-2">
-                    <h3 className="text-2xl font-black text-foreground uppercase tracking-tight">
-                      {paymentMethod === 'instapay' ? 'InstaPay Transfer' : (language === 'ar' ? 'تحويل محفظة' : 'Wallet Transfer')}
+                    <h3 className="text-xl sm:text-2xl font-black text-foreground uppercase tracking-tight">
+                      {paymentMethod === 'instapay' ? 'InstaPay' : (language === 'ar' ? 'تحويل محفظة' : 'Wallet Transfer')}
                     </h3>
-                    <p className="text-muted text-sm font-medium">
+                    <p className="text-muted text-xs sm:text-sm font-medium">
                       {language === 'ar' ? 'يرجى التحويل إلى البيانات التالية:' : 'Please transfer to the following details:'}
                     </p>
                   </div>
 
-                  <div className="bg-white/5 rounded-3xl p-8 border border-white/10 text-center space-y-4 group">
+                  <div className="bg-white/5 rounded-2xl p-6 sm:p-8 border border-white/10 text-center space-y-6">
                     {paymentMethod === 'instapay' ? (
                       <div className="space-y-4">
-                        <div className="text-4xl font-black text-primary tracking-tight break-all select-all">
-                          {appSettings?.instapay_id || 'sportsclub@instapay'}
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-2xl sm:text-3xl font-black text-primary tracking-tight break-all">
+                            {appSettings?.instapay_id || 'sportsclub@instapay'}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(appSettings?.instapay_id || 'sportsclub@instapay');
+                              alert(language === 'ar' ? 'تم النسخ!' : 'Copied!');
+                            }}
+                            className="flex items-center gap-2 text-[10px] font-bold text-muted hover:text-primary transition-colors bg-surface/50 px-3 py-1.5 rounded-full"
+                          >
+                            <Copy className="w-3 h-3" />
+                            {language === 'ar' ? 'نسخ المعرف' : 'Copy ID'}
+                          </button>
                         </div>
-                        <a 
-                          href={appSettings?.instapay_id?.includes('http') ? appSettings.instapay_id : `https://instapay.me/${appSettings?.instapay_id}`} 
-                          target="_blank"
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
-                        >
-                          {language === 'ar' ? 'فتح في إنستا باي' : 'Open in InstaPay'}
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
+                        <div className="flex flex-wrap justify-center gap-3">
+                          <a 
+                            href={appSettings?.instapay_id?.includes('http') ? appSettings.instapay_id : `https://instapay.me/${appSettings?.instapay_id}`} 
+                            target="_blank"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-xs sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                          >
+                            {language === 'ar' ? 'فتح الرابط' : 'Open Link'}
+                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </a>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="text-4xl font-black text-primary tracking-widest select-all">
-                          {appSettings?.wallet_number || '01234567890'}
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-3xl sm:text-4xl font-black text-primary tracking-widest">
+                            {appSettings?.wallet_number || '01234567890'}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(appSettings?.wallet_number || '01234567890');
+                              alert(language === 'ar' ? 'تم النسخ!' : 'Copied!');
+                            }}
+                            className="flex items-center gap-2 text-[10px] font-bold text-muted hover:text-primary transition-colors bg-surface/50 px-3 py-1.5 rounded-full"
+                          >
+                            <Copy className="w-3 h-3" />
+                            {language === 'ar' ? 'نسخ الرقم' : 'Copy Number'}
+                          </button>
                         </div>
                         <a 
                           href={`tel:${appSettings?.wallet_number || '01234567890'}`}
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                          className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-xs sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
                         >
-                          {language === 'ar' ? 'اتصال بالرقم' : 'Call Number'}
-                          <Phone className="w-4 h-4" />
+                          {language === 'ar' ? 'اتصال مباشر' : 'Call Now'}
+                          <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
                         </a>
                       </div>
                     )}
                   </div>
 
                   <div className="bg-primary/5 rounded-2xl p-4 flex justify-between items-center border border-primary/10">
-                    <span className="text-sm font-bold text-muted uppercase">{language === 'ar' ? 'المبلغ المطلوب' : 'Required Amount'}</span>
-                    <span className="text-2xl font-black text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-muted uppercase">{language === 'ar' ? 'المبلغ المطلوب' : 'Amount'}</span>
+                    <span className="text-xl sm:text-2xl font-black text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</span>
                   </div>
 
                   {/* Screenshot Upload */}
@@ -727,29 +753,26 @@ export function BookingFlow() {
                       onChange={handleFileUpload}
                       className="hidden" 
                     />
-                    <div className={`p-8 rounded-[2rem] border-2 border-dashed transition-all duration-300 flex flex-col items-center gap-4 ${
+                    <div className={`p-6 sm:p-8 rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center gap-4 ${
                       uploadPreview 
                       ? 'border-primary/50 bg-primary/5' 
                       : 'border-border/50 bg-white/5 hover:border-primary/50 hover:bg-primary/5'
                     }`}>
                       {uploadPreview ? (
-                        <div className="relative group/preview">
-                          <img src={uploadPreview} alt="Screenshot" className="max-h-48 rounded-2xl shadow-2xl transition-transform group-hover/preview:scale-[1.02]" />
-                          <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
-                            <Upload className="w-10 h-10 text-white" />
-                          </div>
-                          <p className="mt-4 text-sm font-black text-primary text-center">
-                            {language === 'ar' ? '✅ تم الرفع - اضغط لتغيير الصورة' : '✅ Uploaded - Click to change'}
+                        <div className="relative group/preview text-center">
+                          <img src={uploadPreview} alt="Screenshot" className="max-h-40 sm:max-h-48 rounded-2xl shadow-2xl transition-transform group-hover/preview:scale-[1.02] mx-auto" />
+                          <p className="mt-4 text-[10px] sm:text-xs font-black text-primary">
+                            {language === 'ar' ? '✅ تم الرفع - اضغط للتغيير' : '✅ Uploaded - Click to change'}
                           </p>
                         </div>
                       ) : (
                         <>
-                          <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-lg">
-                            <Upload className="w-8 h-8" />
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl sm:rounded-3xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-lg">
+                            <Upload className="w-6 h-6 sm:w-8 sm:h-8" />
                           </div>
                           <div className="text-center">
-                            <p className="font-black text-lg text-foreground mb-1">{t.uploadScreenshot}</p>
-                            <p className="text-xs text-muted font-medium">{t.fileTypes}</p>
+                            <p className="font-black text-sm sm:text-lg text-foreground mb-1">{t.uploadScreenshot}</p>
+                            <p className="text-[10px] text-muted font-medium">{t.fileTypes}</p>
                           </div>
                         </>
                       )}
