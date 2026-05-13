@@ -46,10 +46,17 @@ export function BookingFlow() {
       const endMinutes = 22 * 60;  // 22:00
       let currentMinutes = startMinutes;
 
+      const now = new Date();
+      const todayDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const isToday = selectedDate === todayDateString;
+      const currentHourMinutes = now.getHours() * 60 + now.getMinutes();
+
       while (currentMinutes <= endMinutes) {
-        const h = Math.floor(currentMinutes / 60);
-        const m = currentMinutes % 60;
-        slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        if (!isToday || currentMinutes > currentHourMinutes) {
+          const h = Math.floor(currentMinutes / 60);
+          const m = currentMinutes % 60;
+          slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        }
         currentMinutes += selectedDuration;
       }
       setAvailableTimeSlots(slots);
@@ -58,6 +65,10 @@ export function BookingFlow() {
       setAvailableTimeSlots([]);
     }
   }, [selectedDate, selectedDuration]);
+
+  // Get today's date string for input min attribute
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const nextStep = () => setStep((s) => Math.min(s + 1, 5) as Step);
   const prevStep = () => setStep((s) => Math.max(s - 1, 1) as Step);
@@ -143,6 +154,7 @@ export function BookingFlow() {
                   </div>
                   <input 
                     type="date" 
+                    min={todayStr}
                     value={selectedDate || ''}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
