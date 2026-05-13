@@ -176,7 +176,10 @@ export function BookingFlow() {
       if (data) setActivities(data);
 
       const { data: settingsData } = await (supabase.from("app_settings") as any)
-        .select("*").limit(1).single();
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
       if (settingsData) setAppSettings(settingsData);
 
       setLoading(false);
@@ -219,41 +222,62 @@ export function BookingFlow() {
   const prevStep = () => setStep((s) => Math.max(s - 1, 1) as Step);
 
   return (
-    <div className="glass rounded-3xl p-6 sm:p-10 shadow-2xl border border-white/10 relative overflow-hidden" dir={direction}>
+    <div className="glass rounded-[2.5rem] p-6 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-white/20 relative overflow-hidden bg-white/5 backdrop-blur-2xl" dir={direction}>
+      {/* Decorative background glow */}
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+
       {/* Progress Bar */}
-      <div className="flex items-center justify-between mb-8 relative z-10">
+      <div className="flex items-center justify-between mb-16 relative z-10 max-w-2xl mx-auto">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex flex-col items-center flex-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-              step >= i ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-surface text-muted'
+          <div key={i} className="flex flex-col items-center relative flex-1 group">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-500 transform ${
+              step >= i 
+              ? 'bg-primary text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' 
+              : 'bg-surface/50 text-muted grayscale'
             }`}>
-              {step > i ? <CheckCircle2 className="w-5 h-5" /> : i}
+              {step > i ? <CheckCircle2 className="w-6 h-6" /> : i}
             </div>
+            
+            {/* Step label (optional/floating) */}
+            <div className={`absolute -bottom-8 whitespace-nowrap text-[10px] font-bold uppercase tracking-tighter transition-all duration-500 ${
+              step === i ? 'text-primary opacity-100 translate-y-0' : 'text-muted opacity-40 translate-y-1'
+            }`}>
+              {i === 1 && (language === 'ar' ? 'النشاط' : 'Activity')}
+              {i === 2 && (language === 'ar' ? 'الوقت' : 'Time')}
+              {i === 3 && (language === 'ar' ? 'بياناتك' : 'Details')}
+              {i === 4 && (language === 'ar' ? 'الدفع' : 'Payment')}
+              {i === 5 && (language === 'ar' ? 'تأكيد' : 'Confirm')}
+            </div>
+
             {/* Connector Line */}
             {i < 5 && (
-              <div className={`absolute top-5 h-[2px] w-[calc(20%-2.5rem)] ${direction === 'rtl' ? 'mr-[10%] left-auto right-0' : 'ml-[10%] left-0 right-auto'} -z-10 transition-all duration-300 ${
-                step > i ? 'bg-primary' : 'bg-surface'
-              }`} style={{ [direction === 'rtl' ? 'right' : 'left']: `${(i - 1) * 20 + 10}%` }} />
+              <div className={`absolute top-6 ${direction === 'rtl' ? '-left-1/2' : '-right-1/2'} h-[3px] w-full -z-10`}>
+                <div className={`h-full transition-all duration-700 ${step > i ? 'bg-primary shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface/30'}`} />
+              </div>
             )}
           </div>
         ))}
       </div>
 
       {/* Step Content */}
-      <div className="relative z-10 min-h-[400px]">
+      <div className="relative z-10 min-h-[450px]">
         {step === 1 && (
-          <div className={`space-y-6 animate-in fade-in ${direction === 'rtl' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} duration-500`}>
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t.whatToPlay}</h2>
-              <p className="text-muted">{t.selectSport}</p>
+          <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center">
+              <h2 className="text-4xl font-black text-foreground mb-3 tracking-tighter">
+                {language === 'ar' ? 'ماذا تريد أن تلعب؟' : 'Ready to Play?'}
+              </h2>
+              <p className="text-muted text-lg max-w-lg mx-auto">{t.selectSport}</p>
             </div>
             
             {loading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                <p className="text-muted animate-pulse">{language === 'ar' ? 'جاري التحميل...' : 'Loading activities...'}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
                 {activities.map((activity) => (
                   <button 
                     key={activity.id}
@@ -262,28 +286,44 @@ export function BookingFlow() {
                       setSelectedDuration(activity.durations_options?.[0] || 60);
                       setPlayersCount(activity.min_players || 1);
                     }}
-                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${
-                      selectedActivity?.id === activity.id ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
+                    className={`group relative p-8 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center gap-6 overflow-hidden ${
+                      selectedActivity?.id === activity.id 
+                      ? 'border-primary bg-primary/10 shadow-2xl shadow-primary/20 scale-[1.02]' 
+                      : 'border-border/40 bg-surface/30 hover:border-primary/40 hover:bg-surface/50 hover:scale-[1.01]'
                     }`}
                   >
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all duration-500 ${
+                      selectedActivity?.id === activity.id ? 'bg-primary text-white rotate-[10deg]' : 'bg-primary/10 text-primary group-hover:rotate-12'
+                    }`}>
                       {(() => {
                         const iconObj = AVAILABLE_ICONS.find(i => i.name === (activity.icon_name || "Trophy"));
                         const IconComp = iconObj ? iconObj.icon : Trophy;
-                        return <IconComp className="w-8 h-8" />;
+                        return <IconComp className="w-10 h-10" />;
                       })()}
                     </div>
-                    <span className="font-semibold text-lg text-foreground">
-                      {language === 'ar' ? activity.name_ar : activity.name_en}
-                    </span>
-                    <div className="text-sm text-muted space-y-1">
-                      <p className="font-medium text-foreground">EGP {activity.base_price || 0}</p>
-                      <p>{activity.pricing_type === 'per_person' 
-                        ? (language === 'ar' ? `للفرد / ${activity.durations_options?.[0] || 60} دقيقة` : `Per person / ${activity.durations_options?.[0] || 60} mins`)
-                        : (language === 'ar' ? `للمباراة / ${activity.durations_options?.[0] || 60} دقيقة` : `Per match / ${activity.durations_options?.[0] || 60} mins`)
-                      }</p>
-                      <p className="text-xs">{language === 'ar' ? `${activity.min_players || 1} - ${activity.max_players || 10} لاعبين` : `${activity.min_players || 1} - ${activity.max_players || 10} players`}</p>
+                    
+                    <div className="text-center z-10">
+                      <span className="block font-black text-2xl text-foreground mb-2 tracking-tight">
+                        {language === 'ar' ? activity.name_ar : activity.name_en}
+                      </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-center gap-2 text-primary font-bold">
+                          <span>EGP {activity.base_price}</span>
+                          <span className="w-1 h-1 rounded-full bg-primary/40" />
+                          <span className="text-xs uppercase opacity-80">
+                            {activity.pricing_type === 'per_person' ? (language === 'ar' ? 'للفرد' : 'Per Person') : (language === 'ar' ? 'للمباراة' : 'Per Match')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted font-medium opacity-60">
+                          {activity.durations_options?.[0]} {language === 'ar' ? 'دقيقة / حجز' : 'mins / slot'}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Subtle pattern or glow for active state */}
+                    {selectedActivity?.id === activity.id && (
+                      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -423,121 +463,126 @@ export function BookingFlow() {
         )}
 
         {step === 3 && (
-          <div className={`space-y-6 animate-in fade-in ${direction === 'rtl' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} duration-500`}>
-             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t.yourDetails}</h2>
-              <p className="text-muted">{t.reachYou}</p>
+          <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center">
+              <h2 className="text-4xl font-black text-foreground mb-3 tracking-tighter">
+                {language === 'ar' ? 'بيانات التواصل' : 'Your Contact Details'}
+              </h2>
+              <p className="text-muted text-lg max-w-lg mx-auto">{t.reachYou}</p>
             </div>
             
-            <div className="space-y-4 max-w-md mx-auto">
-              <input 
-                type="text" 
-                placeholder={t.fullName} 
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
-                required
-              />
-
-              <div className="flex gap-2">
-                <select 
-                  value={phoneCode} 
-                  onChange={(e) => setPhoneCode(e.target.value)}
-                  className={`bg-surface/50 border border-border rounded-xl py-3 px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <option value="+20">+20</option>
-                  <option value="+966">+966</option>
-                  <option value="+971">+971</option>
-                  <option value="+965">+965</option>
-                  <option value="+974">+974</option>
-                  <option value="+973">+973</option>
-                </select>
+            <div className="max-w-2xl mx-auto grid gap-6">
+              <div className="relative group">
+                <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} transition-transform group-focus-within:scale-110 z-10`}>
+                  <Users className="w-5 h-5 text-primary" />
+                </div>
                 <input 
-                  type="tel" 
-                  placeholder={t.phoneNumber} 
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="flex-1 bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
+                  type="text" 
+                  placeholder={t.fullName} 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} text-foreground text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
                   required
                 />
               </div>
 
-              <div className="flex gap-2">
-                <select 
-                  value={whatsappCode} 
-                  onChange={(e) => setWhatsappCode(e.target.value)}
-                  className={`bg-surface/50 border border-border rounded-xl py-3 px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <option value="+20">+20</option>
-                  <option value="+966">+966</option>
-                  <option value="+971">+971</option>
-                  <option value="+965">+965</option>
-                  <option value="+974">+974</option>
-                  <option value="+973">+973</option>
-                </select>
-                <input 
-                  type="tel" 
-                  placeholder={t.whatsappNumber} 
-                  value={whatsappNumber}
-                  onChange={(e) => setWhatsappNumber(e.target.value)}
-                  className="flex-1 bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" 
-                  required
-                />
-              </div>
-              
-              {selectedActivity?.pricing_type === 'per_person' && (
+              <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'عدد اللاعبين' : 'Number of Players'}</label>
-                  <div className="flex items-center gap-4">
+                  <label className="text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
+                  <div className="flex gap-2 relative group">
+                    <select 
+                      value={phoneCode} 
+                      onChange={(e) => setPhoneCode(e.target.value)}
+                      className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 text-foreground font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="+20">+20</option>
+                      <option value="+966">+966</option>
+                      <option value="+971">+971</option>
+                      <option value="+965">+965</option>
+                      <option value="+974">+974</option>
+                      <option value="+973">+973</option>
+                    </select>
                     <input 
-                      type="number" 
-                      min={selectedActivity.min_players || 1} 
-                      max={selectedActivity.max_players || 10}
-                      value={playersCount}
-                      onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
-                      onBlur={() => {
-                        const min = selectedActivity.min_players || 1;
-                        const max = selectedActivity.max_players || 10;
-                        if (playersCount < min) setPlayersCount(min);
-                        if (playersCount > max) setPlayersCount(max);
-                      }}
-                      className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" 
+                      type="tel" 
+                      placeholder="123 456 7890" 
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      required
                     />
-                    <span className="text-sm text-muted whitespace-nowrap">
-                      {selectedActivity.min_players} - {selectedActivity.max_players} {language === 'ar' ? 'مسموح بهم' : 'allowed'}
-                    </span>
                   </div>
                 </div>
-              )}
 
-              <textarea 
-                placeholder={t.specialRequests} 
-                value={specialRequests}
-                onChange={(e) => setSpecialRequests(e.target.value)}
-                className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" 
-              />
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted uppercase tracking-widest px-2">{t.whatsappNumber}</label>
+                  <div className="flex gap-2 relative group">
+                    <div className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-green-500" />
+                    </div>
+                    <select 
+                      value={whatsappCode} 
+                      onChange={(e) => setWhatsappCode(e.target.value)}
+                      className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 text-foreground font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="+20">+20</option>
+                      <option value="+966">+966</option>
+                      <option value="+971">+971</option>
+                      <option value="+965">+965</option>
+                      <option value="+974">+974</option>
+                      <option value="+973">+973</option>
+                    </select>
+                    <input 
+                      type="tel" 
+                      placeholder="123 456 7890" 
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative group">
+                <div className={`absolute top-4 ${direction === 'rtl' ? 'right-4' : 'left-4'} z-10`}>
+                  <MessageSquare className="w-5 h-5 text-muted group-focus-within:text-primary transition-colors" />
+                </div>
+                <textarea 
+                  placeholder={t.specialRequests} 
+                  value={specialRequests}
+                  onChange={(e) => setSpecialRequests(e.target.value)}
+                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} py-4 text-foreground placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[120px] transition-all relative z-0`} 
+                />
+              </div>
             </div>
           </div>
         )}
 
         {step === 4 && (
-          <div className={`space-y-6 animate-in fade-in ${direction === 'rtl' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} duration-500`}>
-             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">{t.payment}</h2>
-              <p className="text-muted">
-                {t.total}: EGP {calculateTotal().toFixed(2)}
-              </p>
+          <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center">
+              <h2 className="text-4xl font-black text-foreground mb-3 tracking-tighter">
+                {language === 'ar' ? 'تأكيد الدفع' : 'Payment Confirmation'}
+              </h2>
+              <div className="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full">
+                <span className="text-sm font-bold text-primary uppercase tracking-wider">{t.total}</span>
+                <span className="text-lg font-black text-primary">EGP {calculateTotal().toFixed(2)}</span>
+              </div>
             </div>
             
-            <div className="max-w-md mx-auto space-y-6">
-              {/* Payment Type Selection */}
+            <div className="max-w-2xl mx-auto space-y-8">
+              {/* Payment Type Tabs */}
               {appSettings?.deposit_enabled && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex p-1.5 bg-surface/30 backdrop-blur-md rounded-2xl border border-border/50">
                   <button
                     onClick={() => setPaymentType('full')}
-                    className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentType === 'full' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                    className={`flex-1 py-3 px-6 rounded-xl font-black text-sm transition-all duration-300 ${
+                      paymentType === 'full' 
+                      ? 'bg-primary text-white shadow-xl shadow-primary/20' 
+                      : 'text-muted hover:text-foreground'
+                    }`}
                   >
-                    {language === 'ar' ? 'دفع كامل' : 'Full Payment'}
+                    {language === 'ar' ? 'دفع كامل المبلغ' : 'Pay Full Amount'}
                   </button>
                   <button
                     onClick={() => {
@@ -545,96 +590,163 @@ export function BookingFlow() {
                       const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
                       setPartialAmount(minDeposit);
                     }}
-                    className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentType === 'partial' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                    className={`flex-1 py-3 px-6 rounded-xl font-black text-sm transition-all duration-300 ${
+                      paymentType === 'partial' 
+                      ? 'bg-primary text-white shadow-xl shadow-primary/20' 
+                      : 'text-muted hover:text-foreground'
+                    }`}
                   >
-                    {language === 'ar' ? 'عربون' : 'Deposit'}
+                    {language === 'ar' ? 'دفع عربون' : 'Pay Deposit'}
                   </button>
                 </div>
               )}
 
               {paymentType === 'partial' && (
-                <div className="space-y-2 animate-in slide-in-from-top-2">
-                  <label className="text-sm font-medium text-foreground">
-                    {language === 'ar' ? 'قيمة العربون' : 'Deposit Amount'} 
-                    <span className="text-xs text-muted ml-2">({language === 'ar' ? 'بحد أدنى' : 'min'} {appSettings?.min_deposit_percent}%)</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={partialAmount}
-                    onChange={(e) => setPartialAmount(parseFloat(e.target.value) || 0)}
-                    onBlur={() => {
-                      const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
-                      if (partialAmount < minDeposit) setPartialAmount(minDeposit);
-                      if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
-                    }}
-                    className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
-                  />
+                <div className="space-y-3 animate-in slide-in-from-top-4">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-sm font-bold text-foreground/80 uppercase tracking-widest">
+                      {language === 'ar' ? 'قيمة العربون' : 'Deposit Value'}
+                    </label>
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                      {language === 'ar' ? 'الأدنى' : 'Min'} {appSettings?.min_deposit_percent}%
+                    </span>
+                  </div>
+                  <div className="relative group">
+                    <DollarSign className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} w-5 h-5 text-primary`} />
+                    <input
+                      type="number"
+                      value={partialAmount}
+                      onChange={(e) => setPartialAmount(parseFloat(e.target.value) || 0)}
+                      onBlur={() => {
+                        const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
+                        if (partialAmount < minDeposit) setPartialAmount(minDeposit);
+                        if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
+                      }}
+                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} text-foreground text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* Payment Method Selection */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Payment Method Switcher */}
+              <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setPaymentMethod('instapay')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentMethod === 'instapay' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                  className={`relative overflow-hidden p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                    paymentMethod === 'instapay' 
+                    ? 'border-primary bg-primary/10 shadow-xl' 
+                    : 'border-border/50 bg-surface/30 hover:border-primary/30'
+                  }`}
                 >
-                  InstaPay
+                  <div className={`p-3 rounded-xl ${paymentMethod === 'instapay' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
+                    <CreditCard className="w-6 h-6" />
+                  </div>
+                  <span className="font-black text-sm tracking-tight">InstaPay</span>
                 </button>
                 <button
                   onClick={() => setPaymentMethod('wallet')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentMethod === 'wallet' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                  className={`relative overflow-hidden p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                    paymentMethod === 'wallet' 
+                    ? 'border-primary bg-primary/10 shadow-xl' 
+                    : 'border-border/50 bg-surface/30 hover:border-primary/30'
+                  }`}
                 >
-                  {language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}
+                  <div className={`p-3 rounded-xl ${paymentMethod === 'wallet' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
+                    <Smartphone className="w-6 h-6" />
+                  </div>
+                  <span className="font-black text-sm tracking-tight">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</span>
                 </button>
               </div>
 
-              {/* Payment Details Card */}
-              <div className="p-6 rounded-2xl bg-surface/50 border border-primary/50 relative overflow-hidden">
-                <div className={`absolute top-0 ${direction === 'rtl' ? 'left-0' : 'right-0'} bg-primary text-white text-xs font-bold px-3 py-1 ${direction === 'rtl' ? 'rounded-br-lg' : 'rounded-bl-lg'}`}>{t.recommended}</div>
-                
-                {paymentMethod === 'instapay' ? (
-                  <>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
-                    <p className="text-muted text-sm mb-4">
-                      {t.transferTo}: <strong className="text-primary select-all">{appSettings?.instapay_id || 'sportsclub@instapay'}</strong>
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</h3>
-                    <p className="text-muted text-sm mb-4">
-                      {language === 'ar' ? 'حول إلى رقم' : 'Transfer to'}: <strong className="text-primary select-all">{appSettings?.wallet_number || '01234567890'}</strong>
-                    </p>
-                  </>
-                )}
-
-                <div className="bg-primary/5 rounded-xl p-3 mb-4 text-center">
-                  <p className="text-xs text-muted mb-1">{language === 'ar' ? 'المبلغ المطلوب تحويله حالياً' : 'Amount to transfer now'}</p>
-                  <p className="text-xl font-bold text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</p>
+              {/* Dynamic Payment Details Card */}
+              <div className="relative overflow-hidden rounded-[2.5rem] p-10 bg-gradient-to-br from-surface/80 to-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <ShieldCheck className="w-32 h-32 text-primary" />
                 </div>
                 
-                <label className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group block">
-                  <input 
-                    type="file" 
-                    accept="image/jpeg,image/png,image/webp" 
-                    onChange={handleFileUpload}
-                    className="hidden" 
-                  />
-                  {uploadPreview ? (
-                    <div className="space-y-3">
-                      <img src={uploadPreview} alt="Payment screenshot" className="max-h-48 mx-auto rounded-lg shadow-md" />
-                      <p className="text-sm text-primary font-medium">{language === 'ar' ? '✅ تم رفع الصورة - اضغط لتغييرها' : '✅ Uploaded - Click to change'}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                        <Upload className="w-6 h-6 text-primary" />
+                <div className="relative z-10 space-y-8">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-2xl font-black text-foreground uppercase tracking-tight">
+                      {paymentMethod === 'instapay' ? 'InstaPay Transfer' : (language === 'ar' ? 'تحويل محفظة' : 'Wallet Transfer')}
+                    </h3>
+                    <p className="text-muted text-sm font-medium">
+                      {language === 'ar' ? 'يرجى التحويل إلى البيانات التالية:' : 'Please transfer to the following details:'}
+                    </p>
+                  </div>
+
+                  <div className="bg-white/5 rounded-3xl p-8 border border-white/10 text-center space-y-4 group">
+                    {paymentMethod === 'instapay' ? (
+                      <div className="space-y-4">
+                        <div className="text-4xl font-black text-primary tracking-tight break-all select-all">
+                          {appSettings?.instapay_id || 'sportsclub@instapay'}
+                        </div>
+                        <a 
+                          href={appSettings?.instapay_id?.includes('http') ? appSettings.instapay_id : `https://instapay.me/${appSettings?.instapay_id}`} 
+                          target="_blank"
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                        >
+                          {language === 'ar' ? 'فتح في إنستا باي' : 'Open in InstaPay'}
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
                       </div>
-                      <p className="text-sm text-foreground font-medium">{t.uploadScreenshot}</p>
-                      <p className="text-xs text-muted mt-1">{t.fileTypes}</p>
-                    </>
-                  )}
-                </label>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="text-4xl font-black text-primary tracking-widest select-all">
+                          {appSettings?.wallet_number || '01234567890'}
+                        </div>
+                        <a 
+                          href={`tel:${appSettings?.wallet_number || '01234567890'}`}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                        >
+                          {language === 'ar' ? 'اتصال بالرقم' : 'Call Number'}
+                          <Phone className="w-4 h-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-primary/5 rounded-2xl p-4 flex justify-between items-center border border-primary/10">
+                    <span className="text-sm font-bold text-muted uppercase">{language === 'ar' ? 'المبلغ المطلوب' : 'Required Amount'}</span>
+                    <span className="text-2xl font-black text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</span>
+                  </div>
+
+                  {/* Screenshot Upload */}
+                  <label className="relative block group cursor-pointer">
+                    <input 
+                      type="file" 
+                      accept="image/jpeg,image/png,image/webp" 
+                      onChange={handleFileUpload}
+                      className="hidden" 
+                    />
+                    <div className={`p-8 rounded-[2rem] border-2 border-dashed transition-all duration-300 flex flex-col items-center gap-4 ${
+                      uploadPreview 
+                      ? 'border-primary/50 bg-primary/5' 
+                      : 'border-border/50 bg-white/5 hover:border-primary/50 hover:bg-primary/5'
+                    }`}>
+                      {uploadPreview ? (
+                        <div className="relative group/preview">
+                          <img src={uploadPreview} alt="Screenshot" className="max-h-48 rounded-2xl shadow-2xl transition-transform group-hover/preview:scale-[1.02]" />
+                          <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover/preview:opacity-100 flex items-center justify-center transition-opacity">
+                            <Upload className="w-10 h-10 text-white" />
+                          </div>
+                          <p className="mt-4 text-sm font-black text-primary text-center">
+                            {language === 'ar' ? '✅ تم الرفع - اضغط لتغيير الصورة' : '✅ Uploaded - Click to change'}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-lg">
+                            <Upload className="w-8 h-8" />
+                          </div>
+                          <div className="text-center">
+                            <p className="font-black text-lg text-foreground mb-1">{t.uploadScreenshot}</p>
+                            <p className="text-xs text-muted font-medium">{t.fileTypes}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>

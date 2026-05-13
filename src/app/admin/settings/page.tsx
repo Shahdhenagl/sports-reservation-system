@@ -26,6 +26,7 @@ export default function SettingsPage() {
     const loadSettings = async () => {
       const { data } = await (supabase.from("app_settings") as any)
         .select("*")
+        .order("created_at", { ascending: false })
         .limit(1)
         .single();
       if (data) {
@@ -48,6 +49,7 @@ export default function SettingsPage() {
     // Upsert - update if exists, insert if not
     const { data: existing } = await (supabase.from("app_settings") as any)
       .select("id")
+      .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
