@@ -1,6 +1,3 @@
-"use client"; // Note: This will be changed to server action if needed, but for now I'll use client-side for simplicity in the demo if requested. 
-// Actually, let's make it a proper server action.
-
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
