@@ -31,7 +31,7 @@ export function BookingFlow() {
   const [loading, setLoading] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [playersCount, setPlayersCount] = useState<number>(1);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
@@ -49,6 +49,10 @@ export function BookingFlow() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [specialRequests, setSpecialRequests] = useState("");
+  const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full');
+  const [paymentMethod, setPaymentMethod] = useState<'instapay' | 'wallet'>('instapay');
+  const [partialAmount, setPartialAmount] = useState<number>(0);
+  const [appSettings, setAppSettings] = useState<any>(null);
 
   // Submission state
   const [bookingRef, setBookingRef] = useState("");
@@ -77,7 +81,8 @@ export function BookingFlow() {
 
   const calculateTotal = () => {
     const basePrice = selectedActivity?.base_price || 0;
-    const durationMultiplier = selectedDuration ? selectedDuration / 60 : 1;
+    const slotsCount = selectedTimes.length || 1;
+    const durationMultiplier = selectedDuration ? (selectedDuration / 60) * slotsCount : 1;
     if (selectedActivity?.pricing_type === 'per_person') {
       return basePrice * playersCount * durationMultiplier;
     }
@@ -159,17 +164,21 @@ export function BookingFlow() {
 
 
   useEffect(() => {
-    async function fetchActivities() {
+    async function fetchData() {
       const { data } = await (supabase
         .from("activities") as any)
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: true });
-      
       if (data) setActivities(data);
+
+      const { data: settingsData } = await (supabase.from("app_settings") as any)
+        .select("*").limit(1).single();
+      if (settingsData) setAppSettings(settingsData);
+
       setLoading(false);
     }
-    fetchActivities();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -193,7 +202,7 @@ export function BookingFlow() {
         currentMinutes += selectedDuration;
       }
       setAvailableTimeSlots(slots);
-      setSelectedTime(null); // Reset selected time if date/duration changes
+      setSelectedTimes([]);
     } else {
       setAvailableTimeSlots([]);
     }
@@ -264,8 +273,13 @@ export function BookingFlow() {
                     <span className="font-semibold text-lg text-foreground">
                       {language === 'ar' ? activity.name_ar : activity.name_en}
                     </span>
-                    <div className="text-sm text-muted">
-                      {activity.pricing_type === 'per_person' ? t.perPerson : t.perCourt} - EGP {activity.base_price || 0}
+                    <div className="text-sm text-muted space-y-1">
+                      <p className="font-medium text-foreground">EGP {activity.base_price || 0}</p>
+                      <p>{activity.pricing_type === 'per_person' 
+                        ? (language === 'ar' ? `للفرد / ${activity.durations_options?.[0] || 60} دقيقة` : `Per person / ${activity.durations_options?.[0] || 60} mins`)
+                        : (language === 'ar' ? `للمباراة / ${activity.durations_options?.[0] || 60} دقيقة` : `Per match / ${activity.durations_options?.[0] || 60} mins`)
+                      }</p>
+                      <p className="text-xs">{language === 'ar' ? `${activity.min_players || 1} - ${activity.max_players || 10} لاعبين` : `${activity.min_players || 1} - ${activity.max_players || 10} players`}</p>
                     </div>
                   </button>
                 ))}
@@ -318,18 +332,66 @@ export function BookingFlow() {
 
               {selectedDate && availableTimeSlots.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">{t.selectTime}</label>
+                  <label className="text-sm font-medium text-foreground">
+                    {t.selectTime} {language === 'ar' ? '(يمكنك اختيار أكثر من موعد)' : '(You can select multiple)'}
+                  </label>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto p-1">
-                    {availableTimeSlots.map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={`py-2 text-sm rounded-lg border ${selectedTime === time ? 'border-primary bg-primary text-white font-medium shadow-md' : 'border-border bg-surface hover:border-primary/50 text-foreground transition-colors'}`}
-                      >
-                        {time}
-                      </button>
-                    ))}
+                    {availableTimeSlots.map((time) => {
+                      const isSelected = selectedTimes.includes(time);
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedTimes(selectedTimes.filter(t => t !== time));
+                            } else {
+                              setSelectedTimes([...selectedTimes, time].sort());
+                            }
+                          }}
+                          className={`py-2 text-sm rounded-lg border ${isSelected ? 'border-primary bg-primary text-white font-medium shadow-md' : 'border-border bg-surface hover:border-primary/50 text-foreground transition-colors'}`}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
+              )}
+
+              {/* Player count */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {language === 'ar' ? 'عدد اللاعبين' : 'Number of Players'}
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    min={selectedActivity?.min_players || 1}
+                    max={selectedActivity?.max_players || 10}
+                    value={playersCount}
+                    onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
+                    onBlur={() => {
+                      const min = selectedActivity?.min_players || 1;
+                      const max = selectedActivity?.max_players || 10;
+                      if (playersCount < min) setPlayersCount(min);
+                      if (playersCount > max) setPlayersCount(max);
+                    }}
+                    className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
+                  />
+                  <span className="text-sm text-muted whitespace-nowrap">
+                    {selectedActivity?.min_players || 1} - {selectedActivity?.max_players || 10} {language === 'ar' ? 'مسموح' : 'allowed'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Total Preview */}
+              {selectedTimes.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-muted">{language === 'ar' ? 'الإجمالي المبدئي' : 'Estimated Total'}</p>
+                    <p className="text-xs text-muted mt-1">{selectedTimes.length} {language === 'ar' ? 'فترة' : 'slot(s)'} × {selectedDuration} {language === 'ar' ? 'دقيقة' : 'mins'}</p>
+                  </div>
+                  <span className="text-xl font-bold text-primary">EGP {calculateTotal().toFixed(0)}</span>
                 </div>
               )}
             </div>
@@ -444,10 +506,88 @@ export function BookingFlow() {
             </div>
             
             <div className="max-w-md mx-auto space-y-6">
+              {/* Payment Type Selection */}
+              {appSettings?.deposit_enabled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPaymentType('full')}
+                    className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentType === 'full' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                  >
+                    {language === 'ar' ? 'دفع كامل' : 'Full Payment'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPaymentType('partial');
+                      const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
+                      setPartialAmount(minDeposit);
+                    }}
+                    className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentType === 'partial' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                  >
+                    {language === 'ar' ? 'عربون' : 'Deposit'}
+                  </button>
+                </div>
+              )}
+
+              {paymentType === 'partial' && (
+                <div className="space-y-2 animate-in slide-in-from-top-2">
+                  <label className="text-sm font-medium text-foreground">
+                    {language === 'ar' ? 'قيمة العربون' : 'Deposit Amount'} 
+                    <span className="text-xs text-muted ml-2">({language === 'ar' ? 'بحد أدنى' : 'min'} {appSettings?.min_deposit_percent}%)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={partialAmount}
+                    onChange={(e) => setPartialAmount(parseFloat(e.target.value) || 0)}
+                    onBlur={() => {
+                      const minDeposit = calculateTotal() * (appSettings?.min_deposit_percent / 100);
+                      if (partialAmount < minDeposit) setPartialAmount(minDeposit);
+                      if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
+                    }}
+                    className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              )}
+
+              {/* Payment Method Selection */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPaymentMethod('instapay')}
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentMethod === 'instapay' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                >
+                  InstaPay
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('wallet')}
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${paymentMethod === 'wallet' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface/50 text-muted hover:border-muted'}`}
+                >
+                  {language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}
+                </button>
+              </div>
+
+              {/* Payment Details Card */}
               <div className="p-6 rounded-2xl bg-surface/50 border border-primary/50 relative overflow-hidden">
                 <div className={`absolute top-0 ${direction === 'rtl' ? 'left-0' : 'right-0'} bg-primary text-white text-xs font-bold px-3 py-1 ${direction === 'rtl' ? 'rounded-br-lg' : 'rounded-bl-lg'}`}>{t.recommended}</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
-                <p className="text-muted text-sm mb-4">{t.transferTo}: <strong>sportsclub@instapay</strong></p>
+                
+                {paymentMethod === 'instapay' ? (
+                  <>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
+                    <p className="text-muted text-sm mb-4">
+                      {t.transferTo}: <strong className="text-primary select-all">{appSettings?.instapay_id || 'sportsclub@instapay'}</strong>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</h3>
+                    <p className="text-muted text-sm mb-4">
+                      {language === 'ar' ? 'حول إلى رقم' : 'Transfer to'}: <strong className="text-primary select-all">{appSettings?.wallet_number || '01234567890'}</strong>
+                    </p>
+                  </>
+                )}
+
+                <div className="bg-primary/5 rounded-xl p-3 mb-4 text-center">
+                  <p className="text-xs text-muted mb-1">{language === 'ar' ? 'المبلغ المطلوب تحويله حالياً' : 'Amount to transfer now'}</p>
+                  <p className="text-xl font-bold text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</p>
+                </div>
                 
                 <label className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group block">
                   <input 
@@ -485,9 +625,18 @@ export function BookingFlow() {
             <p className="text-muted max-w-md mx-auto mb-6">
               {t.bookingSuccess}
             </p>
-            <div className="bg-surface/50 border border-border rounded-xl p-4 inline-block">
+            <div className="bg-surface/50 border border-border rounded-xl p-4 inline-block mb-6">
               <p className="text-sm text-muted mb-1">{t.bookingRef}</p>
               <p className="text-2xl font-mono font-bold text-foreground tracking-widest">{bookingRef}</p>
+            </div>
+            
+            <div className="pt-6 border-t border-border max-w-sm mx-auto">
+              <p className="text-sm text-muted mb-2">
+                {language === 'ar' ? 'لإلغاء أو تعديل الحجز، يرجى التواصل مع خدمة العملاء' : 'To cancel or modify your booking, please contact customer service'}
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {appSettings?.customer_service_phone || '+20 123 456 7890'}
+              </p>
             </div>
           </div>
         )}
