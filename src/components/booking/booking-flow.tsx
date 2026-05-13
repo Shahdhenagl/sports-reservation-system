@@ -491,7 +491,7 @@ export function BookingFlow() {
                 />
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-6">
+              <div className="grid gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
                   <div className="flex gap-2 relative group">
