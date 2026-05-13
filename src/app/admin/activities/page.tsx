@@ -117,7 +117,7 @@ export default function ActivitiesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{t.activities}</h1>
-          <p className="text-muted">Manage the sports activities shown in the booking flow</p>
+          <p className="text-muted">{t.activitiesDesc}</p>
         </div>
         <button 
           onClick={() => { setEditingActivity(null); setIsFormOpen(true); }}
@@ -144,46 +144,46 @@ export default function ActivitiesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Pricing Type</label>
-                <select name="pricing_type" defaultValue={editingActivity?.pricing_type || 'per_court'} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none">
-                  <option value="per_court">Per Court / Game (Flat Rate)</option>
-                  <option value="per_person">Per Person</option>
+                <label className="text-sm font-medium text-foreground">{t.pricingType}</label>
+                <select name="pricing_type" defaultValue={editingActivity?.pricing_type || 'per_court'} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                  <option value="per_court">{t.perCourt}</option>
+                  <option value="per_person">{t.perPerson}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Base Price (EGP)</label>
-                <input name="base_price" type="number" required defaultValue={editingActivity?.base_price ?? 100} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <label className="text-sm font-medium text-foreground">{t.basePrice}</label>
+                <input name="base_price" type="number" required defaultValue={editingActivity?.base_price ?? 100} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Min Players</label>
-                <input name="min_players" type="number" required defaultValue={editingActivity?.min_players ?? 1} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <label className="text-sm font-medium text-foreground">{t.minPlayers}</label>
+                <input name="min_players" type="number" required defaultValue={editingActivity?.min_players ?? 1} min={1} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Max Players</label>
-                <input name="max_players" type="number" required defaultValue={editingActivity?.max_players ?? 10} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <label className="text-sm font-medium text-foreground">{t.maxPlayers}</label>
+                <input name="max_players" type="number" required defaultValue={editingActivity?.max_players ?? 10} min={1} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Allowed Durations (in minutes)</label>
-                <input name="durations_options" placeholder="e.g., 60, 90, 120" defaultValue={editingActivity?.durations_options?.join(', ') || '60'} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
-                <p className="text-xs text-muted">Comma separated. E.g., for 1 hr and 1.5 hr, write: 60, 90</p>
+                <label className="text-sm font-medium text-foreground">{t.allowedDurations}</label>
+                <input name="durations_options" placeholder="60, 90, 120" defaultValue={editingActivity?.durations_options?.join(', ') || '60'} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
+                <p className="text-xs text-muted mt-1">{t.commaSeparated}</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.iconName}</label>
-                <input name="icon_name" defaultValue={editingActivity?.icon_name || "Trophy"} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
-                <p className="text-xs text-muted">Lucide icon name (Trophy, Activity, Gamepad2, Users)</p>
+                <input name="icon_name" defaultValue={editingActivity?.icon_name || "Trophy"} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
+                <p className="text-xs text-muted mt-1">{t.lucideIconDesc}</p>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
               <button type="button" onClick={() => { setIsFormOpen(false); setEditingActivity(null); }} className="px-4 py-2 rounded-xl text-muted hover:bg-surface transition-colors">{t.back}</button>
               <button type="submit" className="px-6 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">
-                {editingActivity ? 'Update' : t.submit}
+                {editingActivity ? t.update : t.submit}
               </button>
             </div>
           </form>
@@ -225,20 +225,20 @@ export default function ActivitiesPage() {
               <p className="text-sm text-muted">{activity.name_en} / {activity.name_ar}</p>
               
               <div className="mt-4 pt-4 border-t border-border flex flex-col gap-2 text-sm text-muted">
-                <div className="flex justify-between">
-                  <span>Pricing:</span>
-                  <span className="font-medium text-foreground">{activity.pricing_type === 'per_person' ? 'Per Person' : 'Per Court'}</span>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-80">{t.pricing}:</span>
+                  <span className="font-medium text-foreground">{activity.pricing_type === 'per_person' ? t.perPerson : t.perCourt}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Price:</span>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-80">{t.price}:</span>
                   <span className="font-medium text-foreground">EGP {activity.base_price || 0}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Durations:</span>
-                  <span className="font-medium text-foreground">{(activity.durations_options || []).join(', ')} mins</span>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-80">{t.durations}:</span>
+                  <span className="font-medium text-foreground">{(activity.durations_options || []).join(', ')} {t.mins}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Players:</span>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-80">{t.players}:</span>
                   <span className="font-medium text-foreground">{activity.min_players || 1} - {activity.max_players || 10}</span>
                 </div>
               </div>
