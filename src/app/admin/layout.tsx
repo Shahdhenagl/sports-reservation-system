@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Languages,
-  Trophy
+  Trophy,
+  Users
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -28,6 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: t.dashboard, href: "/admin", icon: LayoutDashboard },
     { name: t.activities, href: "/admin/activities", icon: Trophy },
     { name: t.bookings, href: "/admin/bookings", icon: CalendarDays },
+    { name: language === 'ar' ? 'العملاء' : 'Customers', href: "/admin/customers", icon: Users },
     { name: t.resources, href: "/admin/resources", icon: MapPin },
     { name: t.settings, href: "/admin/settings", icon: Settings },
   ];

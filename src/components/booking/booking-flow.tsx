@@ -43,9 +43,16 @@ export function BookingFlow() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappCode, setWhatsappCode] = useState("+20");
 
+  const supabase = createClient();
+
   // Step 4 state
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [specialRequests, setSpecialRequests] = useState("");
+
+  // Submission state
+  const [bookingRef, setBookingRef] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,7 +66,97 @@ export function BookingFlow() {
     }
   };
 
-  const supabase = createClient();
+  const generateBookingRef = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'BK-';
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const calculateTotal = () => {
+    const basePrice = selectedActivity?.base_price || 0;
+    const durationMultiplier = selectedDuration ? selectedDuration / 60 : 1;
+    if (selectedActivity?.pricing_type === 'per_person') {
+      return basePrice * playersCount * durationMultiplier;
+    }
+    return basePrice * durationMultiplier;
+  };
+
+  const handleSubmitBooking = async () => {
+    setSubmitting(true);
+    try {
+      const ref = generateBookingRef();
+      setBookingRef(ref);
+
+      // 1. Find or create customer
+      const { data: existingCustomers } = await (supabase
+        .from('customers') as any)
+        .select('*')
+        .eq('phone', phoneNumber)
+        .eq('phone_code', phoneCode)
+        .limit(1);
+
+      let customerId;
+      if (existingCustomers && existingCustomers.length > 0) {
+        customerId = existingCustomers[0].id;
+      } else {
+        const { data: newCustomer } = await (supabase
+          .from('customers') as any)
+          .insert([{
+            full_name: fullName,
+            phone: phoneNumber,
+            phone_code: phoneCode,
+            whatsapp: whatsappNumber,
+            whatsapp_code: whatsappCode,
+          }])
+          .select()
+          .single();
+        customerId = newCustomer?.id;
+      }
+
+      // 2. Upload screenshot if exists
+      let screenshotUrl = null;
+      if (uploadedFile) {
+        const fileName = `${ref}_${Date.now()}.${uploadedFile.name.split('.').pop()}`;
+        const { data: uploadData } = await supabase.storage
+          .from('payment-screenshots')
+          .upload(fileName, uploadedFile);
+        if (uploadData) {
+          const { data: publicUrl } = supabase.storage
+            .from('payment-screenshots')
+            .getPublicUrl(fileName);
+          screenshotUrl = publicUrl.publicUrl;
+        }
+      }
+
+      // 3. Insert booking
+      const activityName = language === 'ar' ? selectedActivity?.name_ar : selectedActivity?.name_en;
+      await (supabase.from('bookings') as any).insert([{
+        booking_ref: ref,
+        customer_id: customerId,
+        activity_id: selectedActivity?.id,
+        activity_name: activityName,
+        booking_date: selectedDate,
+        booking_time: selectedTime,
+        duration: selectedDuration,
+        players_count: playersCount,
+        total_price: calculateTotal(),
+        status: 'pending',
+        payment_screenshot: screenshotUrl,
+        special_requests: specialRequests || null,
+      }]);
+
+      setStep(5);
+    } catch (err) {
+      console.error('Booking submission error:', err);
+      alert(language === 'ar' ? 'حدث خطأ أثناء الحجز، حاول مرة أخرى' : 'An error occurred, please try again');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   useEffect(() => {
     async function fetchActivities() {
@@ -327,7 +424,12 @@ export function BookingFlow() {
                 </div>
               )}
 
-              <textarea placeholder={t.specialRequests} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" />
+              <textarea 
+                placeholder={t.specialRequests} 
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" 
+              />
             </div>
           </div>
         )}
@@ -337,16 +439,7 @@ export function BookingFlow() {
              <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-foreground mb-2">{t.payment}</h2>
               <p className="text-muted">
-                {t.total}: EGP {
-                  (() => {
-                    const basePrice = selectedActivity?.base_price || 0;
-                    const durationMultiplier = selectedDuration ? selectedDuration / 60 : 1;
-                    if (selectedActivity?.pricing_type === 'per_person') {
-                      return (basePrice * playersCount * durationMultiplier).toFixed(2);
-                    }
-                    return (basePrice * durationMultiplier).toFixed(2);
-                  })()
-                }
+                {t.total}: EGP {calculateTotal().toFixed(2)}
               </p>
             </div>
             
@@ -394,7 +487,7 @@ export function BookingFlow() {
             </p>
             <div className="bg-surface/50 border border-border rounded-xl p-4 inline-block">
               <p className="text-sm text-muted mb-1">{t.bookingRef}</p>
-              <p className="text-2xl font-mono font-bold text-foreground tracking-widest">BK-8X9A2</p>
+              <p className="text-2xl font-mono font-bold text-foreground tracking-widest">{bookingRef}</p>
             </div>
           </div>
         )}
@@ -410,16 +503,23 @@ export function BookingFlow() {
         
         {step < 5 && (
           <button 
-            onClick={nextStep} 
+            onClick={step === 4 ? handleSubmitBooking : nextStep} 
             disabled={
+              submitting ||
               (step === 1 && !selectedActivity) || 
               (step === 2 && (!selectedDate || !selectedTime || !selectedDuration)) ||
               (step === 3 && (!fullName || !phoneNumber || !whatsappNumber))
             }
             className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}
           >
-            {step === 4 ? t.submit : t.continue}
-            <ChevronRight className={`w-4 h-4 ${direction === 'rtl' ? 'rotate-180' : ''}`} />
+            {submitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                {step === 4 ? t.submit : t.continue}
+                <ChevronRight className={`w-4 h-4 ${direction === 'rtl' ? 'rotate-180' : ''}`} />
+              </>
+            )}
           </button>
         )}
       </div>
