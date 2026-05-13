@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Trophy, Plus, Trash2, Loader2 } from "lucide-react";
+import { Trophy, Plus, Trash2, Pencil, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ActivitiesPage() {
@@ -11,7 +11,8 @@ export default function ActivitiesPage() {
   const t = translations[language];
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
   const supabase = createClient();
 
   const fetchActivities = async () => {
@@ -29,7 +30,7 @@ export default function ActivitiesPage() {
     fetchActivities();
   }, []);
 
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const name_ar = formData.get("name_ar") as string;
@@ -49,18 +50,30 @@ export default function ActivitiesPage() {
       : [60];
 
     try {
-      const { error } = await (supabase
-        .from("activities") as any)
-        .insert([{ 
-          name_ar, 
-          name_en, 
-          icon_name,
-          pricing_type,
-          base_price,
-          min_players,
-          max_players,
-          durations_options
-        }]);
+      const payload = { 
+        name_ar, 
+        name_en, 
+        icon_name,
+        pricing_type,
+        base_price,
+        min_players,
+        max_players,
+        durations_options
+      };
+
+      let error;
+      if (editingActivity) {
+        // Update
+        const res = await (supabase.from("activities") as any)
+          .update(payload)
+          .eq("id", editingActivity.id);
+        error = res.error;
+      } else {
+        // Insert
+        const res = await (supabase.from("activities") as any)
+          .insert([payload]);
+        error = res.error;
+      }
 
       if (error) {
         console.error("Supabase insert error:", error);
@@ -68,7 +81,8 @@ export default function ActivitiesPage() {
         return;
       }
 
-      setIsAdding(false);
+      setIsFormOpen(false);
+      setEditingActivity(null);
       fetchActivities();
     } catch (err: any) {
       console.error("Unexpected error during add:", err);
@@ -106,7 +120,7 @@ export default function ActivitiesPage() {
           <p className="text-muted">Manage the sports activities shown in the booking flow</p>
         </div>
         <button 
-          onClick={() => setIsAdding(true)}
+          onClick={() => { setEditingActivity(null); setIsFormOpen(true); }}
           className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover"
         >
           <Plus className="h-5 w-5" />
@@ -114,61 +128,63 @@ export default function ActivitiesPage() {
         </button>
       </div>
 
-      {isAdding && (
+      {isFormOpen && (
         <div className="glass rounded-2xl p-6 border border-primary/20 animate-in fade-in zoom-in-95 duration-200">
-          <form onSubmit={handleAdd} className="space-y-4">
+          <form key={editingActivity ? editingActivity.id : 'new'} onSubmit={handleSave} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.activityNameAr}</label>
-                <input name="name_ar" required className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="name_ar" required defaultValue={editingActivity?.name_ar || ''} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.activityNameEn}</label>
-                <input name="name_en" required className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="name_en" required defaultValue={editingActivity?.name_en || ''} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Pricing Type</label>
-                <select name="pricing_type" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none">
+                <select name="pricing_type" defaultValue={editingActivity?.pricing_type || 'per_court'} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none">
                   <option value="per_court">Per Court / Game (Flat Rate)</option>
                   <option value="per_person">Per Person</option>
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Base Price (EGP)</label>
-                <input name="base_price" type="number" required defaultValue={100} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="base_price" type="number" required defaultValue={editingActivity?.base_price ?? 100} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Min Players</label>
-                <input name="min_players" type="number" required defaultValue={1} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="min_players" type="number" required defaultValue={editingActivity?.min_players ?? 1} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Max Players</label>
-                <input name="max_players" type="number" required defaultValue={10} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="max_players" type="number" required defaultValue={editingActivity?.max_players ?? 10} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Allowed Durations (in minutes)</label>
-                <input name="durations_options" placeholder="e.g., 60, 90, 120" defaultValue="60" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="durations_options" placeholder="e.g., 60, 90, 120" defaultValue={editingActivity?.durations_options?.join(', ') || '60'} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
                 <p className="text-xs text-muted">Comma separated. E.g., for 1 hr and 1.5 hr, write: 60, 90</p>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.iconName}</label>
-                <input name="icon_name" defaultValue="Trophy" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <input name="icon_name" defaultValue={editingActivity?.icon_name || "Trophy"} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
                 <p className="text-xs text-muted">Lucide icon name (Trophy, Activity, Gamepad2, Users)</p>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-xl text-muted hover:bg-surface transition-colors">{t.back}</button>
-              <button type="submit" className="px-6 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">{t.submit}</button>
+              <button type="button" onClick={() => { setIsFormOpen(false); setEditingActivity(null); }} className="px-4 py-2 rounded-xl text-muted hover:bg-surface transition-colors">{t.back}</button>
+              <button type="submit" className="px-6 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">
+                {editingActivity ? 'Update' : t.submit}
+              </button>
             </div>
           </form>
         </div>
@@ -190,12 +206,20 @@ export default function ActivitiesPage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Trophy className="h-6 w-6" />
                 </div>
-                <button 
-                  onClick={() => handleDelete(activity.id)}
-                  className="p-2 text-danger opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/10 rounded-lg"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { setEditingActivity(activity); setIsFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="p-2 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 rounded-lg"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(activity.id)}
+                    className="p-2 text-danger opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/10 rounded-lg"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
               <h3 className="text-lg font-bold text-foreground mt-4">{language === 'ar' ? activity.name_ar : activity.name_en}</h3>
               <p className="text-sm text-muted">{activity.name_en} / {activity.name_ar}</p>
