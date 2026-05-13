@@ -13,11 +13,11 @@ export default function ResourcesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{t.resources}</h1>
-          <p className="text-muted">Manage your branches and sports courts</p>
+          <p className="text-muted">{t.manageResources}</p>
         </div>
         <button className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover">
           <Plus className="h-5 w-5" />
-          Add Branch
+          {t.addBranch}
         </button>
       </div>
 
@@ -27,14 +27,14 @@ export default function ResourcesPage() {
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <MapPin className="h-6 w-6" />
           </div>
-          <h3 className="text-lg font-bold text-foreground mb-1">Main Branch</h3>
-          <p className="text-sm text-muted mb-4">123 Sports Street, Cairo</p>
+          <h3 className="text-lg font-bold text-foreground mb-1">{t.mainBranch}</h3>
+          <p className="text-sm text-muted mb-4">{t.cairoAddress}</p>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-              3 Courts
+              3 {t.courtsCount}
             </span>
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-              Active
+              {t.active}
             </span>
           </div>
         </div>

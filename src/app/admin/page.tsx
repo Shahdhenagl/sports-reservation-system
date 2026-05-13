@@ -9,23 +9,23 @@ export default function AdminDashboard() {
   const t = translations[language];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       <div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.welcomeAdmin}</h1>
         <p className="text-muted">{t.overview}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title={t.totalBookings} value="12" icon={CalendarDays} trend="+2 from yesterday" />
-        <StatCard title={t.revenue} value="EGP 4,200" icon={CreditCard} trend="+15% from yesterday" />
-        <StatCard title={t.activeCourts} value="8" icon={Users} trend="All operational" />
-        <StatCard title={t.pendingPayments} value="3" icon={TrendingUp} trend="Action required" isAlert />
+        <StatCard title={t.totalBookings} value="12" icon={CalendarDays} trend={`+2 ${t.fromYesterday}`} />
+        <StatCard title={t.revenue} value="EGP 4,200" icon={CreditCard} trend={`+15% ${t.fromYesterday}`} />
+        <StatCard title={t.activeCourts} value="8" icon={Users} trend={t.operational} />
+        <StatCard title={t.pendingPayments} value="3" icon={TrendingUp} trend={t.actionRequired} isAlert />
       </div>
 
       <div className="glass rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Recent Bookings</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">{t.recentBookings}</h2>
         <div className="text-center py-8 text-muted">
-          <p>The booking list will be integrated with Supabase here.</p>
+          <p>{t.bookingIntegration}</p>
         </div>
       </div>
     </div>

@@ -11,12 +11,12 @@ export default function BookingsPage() {
     <div className="space-y-6" dir={direction}>
       <div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.bookings}</h1>
-        <p className="text-muted">View, confirm, and manage all court reservations.</p>
+        <p className="text-muted">{t.bookingsSubtitle}</p>
       </div>
 
       <div className="glass rounded-2xl p-6">
         <div className="text-center py-12 text-muted">
-          <p>Bookings table and calendar view will go here.</p>
+          <p>{t.noBookings}</p>
         </div>
       </div>
     </div>

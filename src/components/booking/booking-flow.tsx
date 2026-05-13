@@ -96,7 +96,7 @@ export function BookingFlow() {
               </button>
             </div>
             <div className="p-4 rounded-xl bg-surface/30 border border-border text-center text-muted">
-              <p>Calendar integration goes here.</p>
+              <p>{t.calendarIntegration}</p>
             </div>
           </div>
         )}
@@ -124,16 +124,16 @@ export function BookingFlow() {
             
             <div className="max-w-md mx-auto space-y-6">
               <div className="p-6 rounded-2xl bg-surface/50 border border-primary/50 relative overflow-hidden">
-                <div className={`absolute top-0 ${direction === 'rtl' ? 'left-0' : 'right-0'} bg-primary text-white text-xs font-bold px-3 py-1 ${direction === 'rtl' ? 'rounded-br-lg' : 'rounded-bl-lg'}`}>Recommended</div>
+                <div className={`absolute top-0 ${direction === 'rtl' ? 'left-0' : 'right-0'} bg-primary text-white text-xs font-bold px-3 py-1 ${direction === 'rtl' ? 'rounded-br-lg' : 'rounded-bl-lg'}`}>{t.recommended}</div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
-                <p className="text-muted text-sm mb-4">Transfer to: <strong>sportsclub@instapay</strong></p>
+                <p className="text-muted text-sm mb-4">{t.transferTo}: <strong>sportsclub@instapay</strong></p>
                 
                 <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group">
                   <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                     <Upload className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="text-sm text-foreground font-medium">Upload Payment Screenshot</p>
-                  <p className="text-xs text-muted mt-1">JPEG, PNG up to 5MB</p>
+                  <p className="text-sm text-foreground font-medium">{t.uploadScreenshot}</p>
+                  <p className="text-xs text-muted mt-1">{t.fileTypes}</p>
                 </div>
               </div>
             </div>
