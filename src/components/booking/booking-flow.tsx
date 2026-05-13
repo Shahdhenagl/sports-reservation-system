@@ -229,6 +229,8 @@ export function BookingFlow() {
               <h2 className="text-2xl font-bold text-foreground mb-2">{t.yourDetails}</h2>
               <p className="text-muted">{t.reachYou}</p>
             </div>
+            
+            <div className="space-y-4 max-w-md mx-auto">
               <input 
                 type="text" 
                 placeholder={t.fullName} 
