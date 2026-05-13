@@ -698,81 +698,66 @@ export function BookingFlow() {
               </div>
 
               {/* Dynamic Payment Details Card */}
-              <div className="relative overflow-hidden rounded-3xl p-6 sm:p-10 bg-gradient-to-br from-surface/80 to-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl">
+              <div className="relative overflow-hidden rounded-3xl p-5 sm:p-10 bg-gradient-to-br from-surface/80 to-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl">
                 <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-5">
                   <ShieldCheck className="w-24 h-24 sm:w-32 sm:h-32 text-primary" />
                 </div>
                 
-                <div className="relative z-10 space-y-6 sm:space-y-8">
-                  <div className="text-center space-y-2">
-                    <h3 className="text-xl sm:text-2xl font-black text-foreground uppercase tracking-tight">
+                <div className="relative z-10 space-y-4 sm:space-y-8">
+                  <div className="text-center">
+                    <h3 className="text-lg sm:text-2xl font-black text-foreground uppercase tracking-tight mb-1">
                       {paymentMethod === 'instapay' ? 'InstaPay' : (language === 'ar' ? 'تحويل محفظة' : 'Wallet Transfer')}
                     </h3>
-                    <p className="text-muted text-xs sm:text-sm font-medium">
-                      {language === 'ar' ? 'يرجى التحويل إلى البيانات التالية:' : 'Please transfer to the following details:'}
+                    <p className="text-muted text-[10px] sm:text-sm font-medium">
+                      {language === 'ar' ? 'بيانات التحويل:' : 'Transfer Details:'}
                     </p>
                   </div>
 
-                  <div className="bg-white/5 rounded-2xl p-6 sm:p-8 border border-white/10 text-center space-y-6">
-                    {paymentMethod === 'instapay' ? (
-                      <div className="space-y-4">
-                        <div className="flex flex-col items-center gap-3">
-                          <span className="text-2xl sm:text-3xl font-black text-primary tracking-tight break-all">
-                            {appSettings?.instapay_id || 'sportsclub@instapay'}
-                          </span>
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(appSettings?.instapay_id || 'sportsclub@instapay');
-                              alert(language === 'ar' ? 'تم النسخ!' : 'Copied!');
-                            }}
-                            className="flex items-center gap-2 text-[10px] font-bold text-muted hover:text-primary transition-colors bg-surface/50 px-3 py-1.5 rounded-full"
-                          >
-                            <Copy className="w-3 h-3" />
-                            {language === 'ar' ? 'نسخ المعرف' : 'Copy ID'}
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-3">
+                  <div className="bg-white/5 rounded-2xl p-5 sm:p-8 border border-white/10 text-center space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-base sm:text-2xl font-black text-primary tracking-tight break-all px-2">
+                          {paymentMethod === 'instapay' ? (appSettings?.instapay_id || 'sportsclub@instapay') : (appSettings?.wallet_number || '01234567890')}
+                        </span>
+                        <button 
+                          onClick={() => {
+                            const val = paymentMethod === 'instapay' ? (appSettings?.instapay_id || 'sportsclub@instapay') : (appSettings?.wallet_number || '01234567890');
+                            navigator.clipboard.writeText(val);
+                            alert(language === 'ar' ? 'تم النسخ!' : 'Copied!');
+                          }}
+                          className="flex items-center gap-2 text-[10px] font-bold text-muted hover:text-primary transition-colors bg-surface/50 px-3 py-1.5 rounded-full"
+                        >
+                          <Copy className="w-3 h-3" />
+                          {language === 'ar' ? 'نسخ' : 'Copy'}
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {paymentMethod === 'instapay' ? (
                           <a 
                             href={appSettings?.instapay_id?.includes('http') ? appSettings.instapay_id : `https://instapay.me/${appSettings?.instapay_id}`} 
                             target="_blank"
-                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-xs sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-[10px] sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
                           >
                             {language === 'ar' ? 'فتح الرابط' : 'Open Link'}
                             <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                           </a>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex flex-col items-center gap-3">
-                          <span className="text-3xl sm:text-4xl font-black text-primary tracking-widest">
-                            {appSettings?.wallet_number || '01234567890'}
-                          </span>
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(appSettings?.wallet_number || '01234567890');
-                              alert(language === 'ar' ? 'تم النسخ!' : 'Copied!');
-                            }}
-                            className="flex items-center gap-2 text-[10px] font-bold text-muted hover:text-primary transition-colors bg-surface/50 px-3 py-1.5 rounded-full"
+                        ) : (
+                          <a 
+                            href={`tel:${appSettings?.wallet_number || '01234567890'}`}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-[10px] sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
                           >
-                            <Copy className="w-3 h-3" />
-                            {language === 'ar' ? 'نسخ الرقم' : 'Copy Number'}
-                          </button>
-                        </div>
-                        <a 
-                          href={`tel:${appSettings?.wallet_number || '01234567890'}`}
-                          className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-xs sm:text-sm shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
-                        >
-                          {language === 'ar' ? 'اتصال مباشر' : 'Call Now'}
-                          <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </a>
+                            {language === 'ar' ? 'اتصال مباشر' : 'Call Now'}
+                            <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </a>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="bg-primary/5 rounded-2xl p-4 flex justify-between items-center border border-primary/10">
-                    <span className="text-[10px] sm:text-xs font-bold text-muted uppercase">{language === 'ar' ? 'المبلغ المطلوب' : 'Amount'}</span>
-                    <span className="text-xl sm:text-2xl font-black text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</span>
+                  <div className="bg-primary/5 rounded-xl sm:rounded-2xl p-4 flex justify-between items-center border border-primary/10">
+                    <span className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest">{language === 'ar' ? 'المبلغ المطلوب' : 'Amount'}</span>
+                    <span className="text-lg sm:text-2xl font-black text-primary">EGP {(paymentType === 'full' ? calculateTotal() : partialAmount).toFixed(2)}</span>
                   </div>
 
                   {/* Screenshot Upload */}
