@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2, Medal, Dumbbell, Target, Bike, Waves, Swords, Flag, Crosshair, Activity } from "lucide-react";
+import { 
+  CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, 
+  Clock, Loader2, Medal, Dumbbell, Target, Bike, Waves, Swords, 
+  Flag, Crosshair, Activity, Users, Phone, ExternalLink, 
+  ShieldCheck, DollarSign, CreditCard, Smartphone, MessageCircle, MessageSquare 
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { createClient } from "@/lib/supabase/client";
