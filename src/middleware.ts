@@ -31,8 +31,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect admin routes - DISABLED FOR NOW AS REQUESTED
-  /*
+  // Protect admin routes
   if (request.nextUrl.pathname.startsWith("/admin") && !request.nextUrl.pathname.startsWith("/admin/login")) {
     if (!user) {
       const url = request.nextUrl.clone();
@@ -40,16 +39,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
-  */
 
   // Redirect logged-in users from login page to dashboard
-  /*
   if (request.nextUrl.pathname === "/admin/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
-  */
 
   return supabaseResponse;
 }
