@@ -38,6 +38,13 @@ export const translations = {
     back: "Back",
     continue: "Continue",
     submit: "Submit Booking",
+    signIn: "Sign In",
+    loginSubtitle: "Sign in to manage bookings and courts",
+    emailLabel: "Email Address",
+    passwordLabel: "Password",
+    emailPlaceholder: "admin@example.com",
+    passwordPlaceholder: "••••••••",
+    signingIn: "Signing In...",
   },
   ar: {
     adminPanel: "لوحة التحكم",
@@ -78,6 +85,13 @@ export const translations = {
     back: "رجوع",
     continue: "استمرار",
     submit: "تأكيد الحجز",
+    signIn: "تسجيل الدخول",
+    loginSubtitle: "سجل دخولك لإدارة الحجوزات والملاعب",
+    emailLabel: "البريد الإلكتروني",
+    passwordLabel: "كلمة المرور",
+    emailPlaceholder: "admin@example.com",
+    passwordPlaceholder: "••••••••",
+    signingIn: "جاري الدخول...",
   }
 };
 
