@@ -31,23 +31,25 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect admin routes
+  // Protect admin routes - DISABLED FOR NOW AS REQUESTED
+  /*
   if (request.nextUrl.pathname.startsWith("/admin") && !request.nextUrl.pathname.startsWith("/admin/login")) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       return NextResponse.redirect(url);
     }
-    // Optional: check profile role for "admin" or "staff"
-    // Since it's MVP, we'll just ensure they are logged in via Supabase Auth
   }
+  */
 
   // Redirect logged-in users from login page to dashboard
+  /*
   if (request.nextUrl.pathname === "/admin/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
+  */
 
   return supabaseResponse;
 }
