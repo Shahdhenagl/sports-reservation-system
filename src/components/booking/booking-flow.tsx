@@ -618,7 +618,6 @@ export function BookingFlow() {
                     </span>
                   </div>
                   <div className="relative group">
-                    <DollarSign className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} w-5 h-5 text-primary`} />
                     <input
                       type="number"
                       value={partialAmount}
@@ -629,7 +628,7 @@ export function BookingFlow() {
                         if (partialAmount < minDeposit) setPartialAmount(minDeposit);
                         if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
                       }}
-                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} text-foreground text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
+                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
                     />
                   </div>
                   <p className="text-[10px] text-muted px-2">
