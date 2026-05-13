@@ -11,23 +11,27 @@ import {
   LogOut, 
   Menu,
   X,
-  CreditCard
+  Languages
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
-
-const navigation = [
-  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Bookings", href: "/admin/bookings", icon: CalendarDays },
-  { name: "Branches & Courts", href: "/admin/resources", icon: MapPin },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
-];
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const { language, toggleLanguage, direction } = useLanguage();
+  const t = translations[language];
+
+  const navigation = [
+    { name: t.dashboard, href: "/admin", icon: LayoutDashboard },
+    { name: t.bookings, href: "/admin/bookings", icon: CalendarDays },
+    { name: t.resources, href: "/admin/resources", icon: MapPin },
+    { name: t.settings, href: "/admin/settings", icon: Settings },
+  ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background" dir={direction}>
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -38,15 +42,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex lg:w-64 lg:flex-col
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 ${direction === 'rtl' ? 'right-0' : 'left-0'} z-50 w-64 bg-surface border-inline-end border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto lg:flex lg:w-64 lg:flex-col
+        ${sidebarOpen ? 'translate-x-0' : (direction === 'rtl' ? 'translate-x-full' : '-translate-x-full')}
       `}>
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           <span className="text-xl font-bold text-foreground flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <CalendarDays className="w-5 h-5 text-white" />
             </div>
-            Admin Panel
+            {t.adminPanel}
           </span>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-muted hover:text-foreground">
             <X className="w-6 h-6" />
@@ -69,20 +73,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted group-hover:text-foreground'}`} />
+                <item.icon className={`${direction === 'rtl' ? 'ml-3' : 'mr-3'} h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted group-hover:text-foreground'}`} />
                 {item.name}
               </Link>
             );
           })}
         </nav>
         
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={toggleLanguage}
+            className="group flex w-full items-center px-3 py-2.5 text-sm font-medium text-muted hover:bg-surface-hover hover:text-foreground rounded-xl transition-all"
+          >
+            <Languages className={`${direction === 'rtl' ? 'ml-3' : 'mr-3'} h-5 w-5 flex-shrink-0`} />
+            {t.language}
+          </button>
+
           <button
             onClick={() => logoutAction()}
             className="group flex w-full items-center px-3 py-2.5 text-sm font-medium text-danger hover:bg-danger/10 rounded-xl transition-all"
           >
-            <LogOut className="mr-3 h-5 w-5 flex-shrink-0 text-danger" />
-            Sign Out
+            <LogOut className={`${direction === 'rtl' ? 'ml-3' : 'mr-3'} h-5 w-5 flex-shrink-0 text-danger`} />
+            {t.signOut}
           </button>
         </div>
       </div>
@@ -96,7 +108,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Menu className="h-6 w-6" />
           </button>
-          <span className="text-lg font-bold text-foreground">Admin Panel</span>
+          <span className="text-lg font-bold text-foreground">{t.adminPanel}</span>
           <div className="w-6" /> {/* Spacer for centering */}
         </header>
 

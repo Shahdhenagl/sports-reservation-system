@@ -1,18 +1,25 @@
+"use client";
+
 import { CalendarDays, CreditCard, Users, TrendingUp } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
+import { translations } from "@/lib/translations";
 
 export default function AdminDashboard() {
+  const { language } = useLanguage();
+  const t = translations[language];
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard Overview</h1>
-        <p className="text-muted">Welcome back. Here is what is happening today.</p>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.welcomeAdmin}</h1>
+        <p className="text-muted">{t.overview}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Today's Bookings" value="12" icon={CalendarDays} trend="+2 from yesterday" />
-        <StatCard title="Revenue (Today)" value="EGP 4,200" icon={CreditCard} trend="+15% from yesterday" />
-        <StatCard title="Active Courts" value="8" icon={Users} trend="All operational" />
-        <StatCard title="Pending Payments" value="3" icon={TrendingUp} trend="Action required" isAlert />
+        <StatCard title={t.totalBookings} value="12" icon={CalendarDays} trend="+2 from yesterday" />
+        <StatCard title={t.revenue} value="EGP 4,200" icon={CreditCard} trend="+15% from yesterday" />
+        <StatCard title={t.activeCourts} value="8" icon={Users} trend="All operational" />
+        <StatCard title={t.pendingPayments} value="3" icon={TrendingUp} trend="Action required" isAlert />
       </div>
 
       <div className="glass rounded-2xl p-6">
