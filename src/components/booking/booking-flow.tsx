@@ -24,8 +24,8 @@ export function BookingFlow() {
 
   useEffect(() => {
     async function fetchActivities() {
-      const { data } = await supabase
-        .from("activities")
+      const { data } = await (supabase
+        .from("activities") as any)
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: true });

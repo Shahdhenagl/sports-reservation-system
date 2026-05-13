@@ -10,8 +10,8 @@ export async function addActivityAction(formData: FormData) {
   const name_en = formData.get("name_en") as string;
   const icon_name = formData.get("icon_name") as string || "Trophy";
 
-  const { error } = await supabase
-    .from("activities")
+  const { error } = await (supabase
+    .from("activities") as any)
     .insert([{ name_ar, name_en, icon_name }]);
 
   if (error) {
@@ -27,8 +27,8 @@ export async function addActivityAction(formData: FormData) {
 export async function deleteActivityAction(id: string) {
   const supabase = await createClient();
   
-  const { error } = await supabase
-    .from("activities")
+  const { error } = await (supabase
+    .from("activities") as any)
     .delete()
     .eq("id", id);
 

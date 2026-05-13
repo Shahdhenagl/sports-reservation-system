@@ -17,8 +17,8 @@ export default function ActivitiesPage() {
 
   const fetchActivities = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("activities")
+    const { data, error } = await (supabase
+      .from("activities") as any)
       .select("*")
       .order("created_at", { ascending: true });
     
