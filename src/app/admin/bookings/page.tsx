@@ -19,30 +19,26 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      let query = (supabase.from("bookings") as any)
-        .select(`
-          *,
-          customers(*)
-        `)
-        .order("created_at", { ascending: false });
+      // Basic select to check what's in the table
+      const { data, error, count } = await (supabase.from("bookings") as any)
+        .select("*, customers(*)", { count: 'exact' });
       
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
+      console.log("DB Check - Rows found:", count, "Data:", data);
       
-      const { data, error } = await query;
+      if (error) throw error;
       
-      if (error) {
-        console.error("Fetch error:", error);
-        // Fallback to simple select
-        const { data: simpleData } = await (supabase.from("bookings") as any)
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (simpleData) setBookings(simpleData);
-      } else {
-        setBookings(data || []);
-      }
-    } catch (err) {
+      // Apply status filter locally for now to be safe
+      const filteredData = statusFilter === "all" 
+        ? (data || []) 
+        : (data || []).filter((b: any) => b.status === statusFilter);
+        
+      setBookings(filteredData);
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      // Fallback
+      const { data } = await (supabase.from("bookings") as any).select("*");
+      setBookings(data || []);
+    } finally {
       console.error("Unexpected error:", err);
     } finally {
       setLoading(false);

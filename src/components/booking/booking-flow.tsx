@@ -112,7 +112,7 @@ export function BookingFlow() {
       if (existingCustomers && existingCustomers.length > 0) {
         customerId = existingCustomers[0].id;
       } else {
-        const { data: newCustomer } = await (supabase
+        const { data: newCustomer, error: customerError } = await (supabase
           .from('customers') as any)
           .insert([{
             full_name: fullName,
@@ -123,6 +123,8 @@ export function BookingFlow() {
           }])
           .select()
           .single();
+        
+        if (customerError) throw customerError;
         customerId = newCustomer?.id;
       }
 
@@ -130,9 +132,12 @@ export function BookingFlow() {
       let screenshotUrl = null;
       if (uploadedFile) {
         const fileName = `${ref}_${Date.now()}.${uploadedFile.name.split('.').pop()}`;
-        const { data: uploadData } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('payment-screenshots')
           .upload(fileName, uploadedFile);
+        
+        if (uploadError) throw uploadError;
+
         if (uploadData) {
           const { data: publicUrl } = supabase.storage
             .from('payment-screenshots')
@@ -143,7 +148,7 @@ export function BookingFlow() {
 
       // 3. Insert booking
       const activityName = language === 'ar' ? selectedActivity?.name_ar : selectedActivity?.name_en;
-      await (supabase.from('bookings') as any).insert([{
+      const { error: insertError } = await (supabase.from('bookings') as any).insert([{
         booking_ref: ref,
         customer_id: customerId,
         activity_id: selectedActivity?.id,
@@ -161,10 +166,14 @@ export function BookingFlow() {
         special_requests: specialRequests || null,
       }]);
 
+      if (insertError) throw insertError;
+
       setStep(5);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Booking submission error:', err);
-      alert(language === 'ar' ? 'حدث خطأ أثناء الحجز، حاول مرة أخرى' : 'An error occurred, please try again');
+      alert(language === 'ar' 
+        ? `حدث خطأ أثناء الحجز: ${err.message || 'حاول مرة أخرى'}` 
+        : `Error: ${err.message || 'Please try again'}`);
     } finally {
       setSubmitting(false);
     }
