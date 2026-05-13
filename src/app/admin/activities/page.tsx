@@ -5,7 +5,6 @@ import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { Trophy, Plus, Trash2, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { addActivityAction, deleteActivityAction } from "@/app/actions/activities";
 
 export default function ActivitiesPage() {
   const { language, direction } = useLanguage();
@@ -33,20 +32,47 @@ export default function ActivitiesPage() {
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const result = await addActivityAction(formData);
-    if (result.success) {
+    const name_ar = formData.get("name_ar") as string;
+    const name_en = formData.get("name_en") as string;
+    const icon_name = formData.get("icon_name") as string || "Trophy";
+
+    try {
+      const { error } = await (supabase
+        .from("activities") as any)
+        .insert([{ name_ar, name_en, icon_name }]);
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        alert(`Error: ${error.message}`);
+        return;
+      }
+
       setIsAdding(false);
       fetchActivities();
-    } else {
-      alert(result.error);
+    } catch (err: any) {
+      console.error("Unexpected error during add:", err);
+      alert(`Unexpected error: ${err.message}`);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure?")) {
-      const result = await deleteActivityAction(id);
-      if (result.success) {
+      try {
+        const { error } = await (supabase
+          .from("activities") as any)
+          .delete()
+          .eq("id", id);
+
+        if (error) {
+          console.error("Supabase delete error:", error);
+          alert(`Error: ${error.message}`);
+          return;
+        }
+
         fetchActivities();
+      } catch (err: any) {
+        console.error("Unexpected error during delete:", err);
+        alert(`Unexpected error: ${err.message}`);
       }
     }
   };
