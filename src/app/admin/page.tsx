@@ -5,7 +5,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 
 export default function AdminDashboard() {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const t = translations[language];
 
   return (
