@@ -16,9 +16,12 @@ export function BookingFlow() {
   // Dynamic data
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [playersCount, setPlayersCount] = useState<number>(1);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
   const supabase = createClient();
 
@@ -74,13 +77,17 @@ export function BookingFlow() {
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activities.map((activity) => (
                   <button 
                     key={activity.id}
-                    onClick={() => setSelectedSport(activity.id)}
+                    onClick={() => {
+                      setSelectedActivity(activity);
+                      setSelectedDuration(activity.durations_options?.[0] || 60);
+                      setPlayersCount(activity.min_players || 1);
+                    }}
                     className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-4 ${
-                      selectedSport === activity.id ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
+                      selectedActivity?.id === activity.id ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
                     }`}
                   >
                     <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
@@ -89,6 +96,9 @@ export function BookingFlow() {
                     <span className="font-semibold text-lg text-foreground">
                       {language === 'ar' ? activity.name_ar : activity.name_en}
                     </span>
+                    <div className="text-sm text-muted">
+                      {activity.pricing_type === 'per_person' ? 'Per Person' : 'Per Game'} - EGP {activity.base_price || 0}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -104,7 +114,7 @@ export function BookingFlow() {
             </div>
             
             {/* Functional Date/Time selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="space-y-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.selectDate}</label>
                 <div className="relative">
@@ -114,25 +124,53 @@ export function BookingFlow() {
                   <input 
                     type="date" 
                     value={selectedDate || ''}
-                    onChange={(e) => setSelectedDate(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      // Generate mock time slots from 08:00 to 22:00
+                      const slots = [];
+                      for (let i = 8; i <= 22; i++) {
+                        slots.push(`${i.toString().padStart(2, '0')}:00`);
+                      }
+                      setAvailableTimeSlots(slots);
+                    }}
                     className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">{t.selectTime}</label>
-                <div className="relative">
-                  <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} pointer-events-none`}>
-                    <Clock className="w-5 h-5 text-primary" />
+
+              {selectedActivity?.durations_options?.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Select Duration</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {selectedActivity.durations_options.map((duration: number) => (
+                      <button
+                        key={duration}
+                        onClick={() => setSelectedDuration(duration)}
+                        className={`py-2 rounded-xl border ${selectedDuration === duration ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-surface/50 text-muted hover:border-primary/50'}`}
+                      >
+                        {duration} mins
+                      </button>
+                    ))}
                   </div>
-                  <input 
-                    type="time" 
-                    value={selectedTime || ''}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className={`w-full bg-surface/50 border border-border rounded-xl py-3 ${direction === 'rtl' ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-foreground focus:ring-2 focus:ring-primary outline-none transition-colors hover:border-primary/50`}
-                  />
                 </div>
-              </div>
+              )}
+
+              {selectedDate && availableTimeSlots.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">{t.selectTime}</label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto p-1">
+                    {availableTimeSlots.map((time) => (
+                      <button
+                        key={time}
+                        onClick={() => setSelectedTime(time)}
+                        className={`py-2 text-sm rounded-lg border ${selectedTime === time ? 'border-primary bg-primary text-white font-medium shadow-md' : 'border-border bg-surface hover:border-primary/50 text-foreground transition-colors'}`}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -146,6 +184,26 @@ export function BookingFlow() {
             <div className="space-y-4 max-w-md mx-auto">
               <input type="text" placeholder={t.fullName} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
               <input type="tel" placeholder={t.phoneNumber} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary" />
+              
+              {selectedActivity?.pricing_type === 'per_person' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Number of Players</label>
+                  <div className="flex items-center gap-4">
+                    <input 
+                      type="number" 
+                      min={selectedActivity.min_players || 1} 
+                      max={selectedActivity.max_players || 10}
+                      value={playersCount}
+                      onChange={(e) => setPlayersCount(parseInt(e.target.value) || 1)}
+                      className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" 
+                    />
+                    <span className="text-sm text-muted whitespace-nowrap">
+                      {selectedActivity.min_players} - {selectedActivity.max_players} allowed
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <textarea placeholder={t.specialRequests} className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]" />
             </div>
           </div>
@@ -155,7 +213,18 @@ export function BookingFlow() {
           <div className={`space-y-6 animate-in fade-in ${direction === 'rtl' ? 'slide-in-from-left-8' : 'slide-in-from-right-8'} duration-500`}>
              <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-foreground mb-2">{t.payment}</h2>
-              <p className="text-muted">{t.total}: EGP 600.00</p>
+              <p className="text-muted">
+                {t.total}: EGP {
+                  (() => {
+                    const basePrice = selectedActivity?.base_price || 0;
+                    const durationMultiplier = selectedDuration ? selectedDuration / 60 : 1;
+                    if (selectedActivity?.pricing_type === 'per_person') {
+                      return (basePrice * playersCount * durationMultiplier).toFixed(2);
+                    }
+                    return (basePrice * durationMultiplier).toFixed(2);
+                  })()
+                }
+              </p>
             </div>
             
             <div className="max-w-md mx-auto space-y-6">
@@ -204,7 +273,10 @@ export function BookingFlow() {
         {step < 5 && (
           <button 
             onClick={nextStep} 
-            disabled={step === 1 && !selectedSport}
+            disabled={
+              (step === 1 && !selectedActivity) || 
+              (step === 2 && (!selectedDate || !selectedTime || !selectedDuration))
+            }
             className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}
           >
             {step === 4 ? t.submit : t.continue}

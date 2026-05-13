@@ -35,11 +35,32 @@ export default function ActivitiesPage() {
     const name_ar = formData.get("name_ar") as string;
     const name_en = formData.get("name_en") as string;
     const icon_name = formData.get("icon_name") as string || "Trophy";
+    
+    // New fields
+    const pricing_type = formData.get("pricing_type") as string;
+    const base_price = parseFloat(formData.get("base_price") as string) || 0;
+    const min_players = parseInt(formData.get("min_players") as string) || 1;
+    const max_players = parseInt(formData.get("max_players") as string) || 10;
+    const durationsStr = formData.get("durations_options") as string;
+    
+    // Parse comma-separated durations into JSON array
+    const durations_options = durationsStr 
+      ? durationsStr.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d))
+      : [60];
 
     try {
       const { error } = await (supabase
         .from("activities") as any)
-        .insert([{ name_ar, name_en, icon_name }]);
+        .insert([{ 
+          name_ar, 
+          name_en, 
+          icon_name,
+          pricing_type,
+          base_price,
+          min_players,
+          max_players,
+          durations_options
+        }]);
 
       if (error) {
         console.error("Supabase insert error:", error);
@@ -106,11 +127,46 @@ export default function ActivitiesPage() {
                 <input name="name_en" required className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">{t.iconName} (Lucide icon name, e.g., Trophy, Activity, Dumbbell)</label>
-              <input name="icon_name" defaultValue="Trophy" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Pricing Type</label>
+                <select name="pricing_type" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none">
+                  <option value="per_court">Per Court / Game (Flat Rate)</option>
+                  <option value="per_person">Per Person</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Base Price (EGP)</label>
+                <input name="base_price" type="number" required defaultValue={100} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+              </div>
             </div>
-            <div className="flex justify-end gap-3">
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Min Players</label>
+                <input name="min_players" type="number" required defaultValue={1} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Max Players</label>
+                <input name="max_players" type="number" required defaultValue={10} min={1} className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Allowed Durations (in minutes)</label>
+                <input name="durations_options" placeholder="e.g., 60, 90, 120" defaultValue="60" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <p className="text-xs text-muted">Comma separated. E.g., for 1 hr and 1.5 hr, write: 60, 90</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">{t.iconName}</label>
+                <input name="icon_name" defaultValue="Trophy" className="w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none" />
+                <p className="text-xs text-muted">Lucide icon name (Trophy, Activity, Gamepad2, Users)</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
               <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-xl text-muted hover:bg-surface transition-colors">{t.back}</button>
               <button type="submit" className="px-6 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">{t.submit}</button>
             </div>
@@ -143,6 +199,25 @@ export default function ActivitiesPage() {
               </div>
               <h3 className="text-lg font-bold text-foreground mt-4">{language === 'ar' ? activity.name_ar : activity.name_en}</h3>
               <p className="text-sm text-muted">{activity.name_en} / {activity.name_ar}</p>
+              
+              <div className="mt-4 pt-4 border-t border-border flex flex-col gap-2 text-sm text-muted">
+                <div className="flex justify-between">
+                  <span>Pricing:</span>
+                  <span className="font-medium text-foreground">{activity.pricing_type === 'per_person' ? 'Per Person' : 'Per Court'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Price:</span>
+                  <span className="font-medium text-foreground">EGP {activity.base_price || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Durations:</span>
+                  <span className="font-medium text-foreground">{(activity.durations_options || []).join(', ')} mins</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Players:</span>
+                  <span className="font-medium text-foreground">{activity.min_players || 1} - {activity.max_players || 10}</span>
+                </div>
+              </div>
             </div>
           ))
         )}
