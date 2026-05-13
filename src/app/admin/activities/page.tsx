@@ -3,8 +3,20 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Trophy, Plus, Trash2, Pencil, Loader2 } from "lucide-react";
+import { Trophy, Plus, Trash2, Pencil, Loader2, Gamepad2, Activity, Dumbbell, Target, Medal, Users, Flame, Swords } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+const AVAILABLE_ICONS = [
+  { name: "Trophy", icon: Trophy },
+  { name: "Gamepad2", icon: Gamepad2 },
+  { name: "Activity", icon: Activity },
+  { name: "Dumbbell", icon: Dumbbell },
+  { name: "Target", icon: Target },
+  { name: "Medal", icon: Medal },
+  { name: "Users", icon: Users },
+  { name: "Flame", icon: Flame },
+  { name: "Swords", icon: Swords },
+];
 
 export default function ActivitiesPage() {
   const { language, direction } = useLanguage();
@@ -13,7 +25,14 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<any | null>(null);
+  const [selectedIcon, setSelectedIcon] = useState("Trophy");
   const supabase = createClient();
+
+  const renderIcon = (name: string, className: string = "h-6 w-6") => {
+    const iconObj = AVAILABLE_ICONS.find(i => i.name === name);
+    const IconComponent = iconObj ? iconObj.icon : Trophy;
+    return <IconComponent className={className} />;
+  };
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -120,7 +139,7 @@ export default function ActivitiesPage() {
           <p className="text-muted">{t.activitiesDesc}</p>
         </div>
         <button 
-          onClick={() => { setEditingActivity(null); setIsFormOpen(true); }}
+          onClick={() => { setEditingActivity(null); setSelectedIcon("Trophy"); setIsFormOpen(true); }}
           className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover"
         >
           <Plus className="h-5 w-5" />
@@ -175,8 +194,23 @@ export default function ActivitiesPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.iconName}</label>
-                <input name="icon_name" defaultValue={editingActivity?.icon_name || "Trophy"} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
-                <p className="text-xs text-muted mt-1">{t.lucideIconDesc}</p>
+                <input type="hidden" name="icon_name" value={selectedIcon} />
+                <div className="grid grid-cols-5 gap-2">
+                  {AVAILABLE_ICONS.map((iconObj) => {
+                    const IconComponent = iconObj.icon;
+                    return (
+                      <button
+                        key={iconObj.name}
+                        type="button"
+                        onClick={() => setSelectedIcon(iconObj.name)}
+                        className={`p-3 flex justify-center items-center rounded-xl border transition-all ${selectedIcon === iconObj.name ? 'border-primary bg-primary/10 text-primary scale-110 shadow-md' : 'border-border bg-surface/50 text-muted hover:border-primary/50'}`}
+                        title={iconObj.name}
+                      >
+                        <IconComponent className="w-6 h-6" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -204,11 +238,11 @@ export default function ActivitiesPage() {
             <div key={activity.id} className="glass group relative overflow-hidden rounded-2xl p-6 transition-all hover:shadow-xl border border-border/50">
               <div className="flex items-center justify-between">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Trophy className="h-6 w-6" />
+                  {renderIcon(activity.icon_name || "Trophy", "h-6 w-6")}
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => { setEditingActivity(activity); setIsFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => { setEditingActivity(activity); setSelectedIcon(activity.icon_name || "Trophy"); setIsFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     className="p-2 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 rounded-lg"
                   >
                     <Pencil className="h-5 w-5" />

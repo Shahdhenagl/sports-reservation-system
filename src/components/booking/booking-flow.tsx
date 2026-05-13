@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2 } from "lucide-react";
+import { CalendarDays, MapPin, Trophy, CheckCircle2, ChevronRight, Upload, Clock, Loader2, Gamepad2, Activity, Dumbbell, Target, Medal, Users, Flame, Swords } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
 import { createClient } from "@/lib/supabase/client";
+
+const AVAILABLE_ICONS = [
+  { name: "Trophy", icon: Trophy },
+  { name: "Gamepad2", icon: Gamepad2 },
+  { name: "Activity", icon: Activity },
+  { name: "Dumbbell", icon: Dumbbell },
+  { name: "Target", icon: Target },
+  { name: "Medal", icon: Medal },
+  { name: "Users", icon: Users },
+  { name: "Flame", icon: Flame },
+  { name: "Swords", icon: Swords },
+];
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -121,8 +133,12 @@ export function BookingFlow() {
                       selectedActivity?.id === activity.id ? 'border-primary bg-primary/10' : 'border-border bg-surface/50 hover:border-muted'
                     }`}
                   >
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Trophy className="w-8 h-8 text-primary" />
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      {(() => {
+                        const iconObj = AVAILABLE_ICONS.find(i => i.name === (activity.icon_name || "Trophy"));
+                        const IconComp = iconObj ? iconObj.icon : Trophy;
+                        return <IconComp className="w-8 h-8" />;
+                      })()}
                     </div>
                     <span className="font-semibold text-lg text-foreground">
                       {language === 'ar' ? activity.name_ar : activity.name_en}
