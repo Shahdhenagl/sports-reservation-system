@@ -227,26 +227,26 @@ export function BookingFlow() {
   const prevStep = () => setStep((s) => Math.max(s - 1, 1) as Step);
 
   return (
-    <div className="glass rounded-[2.5rem] p-6 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-white/20 relative overflow-hidden bg-white/5 backdrop-blur-2xl" dir={direction}>
+    <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-white/20 relative overflow-hidden bg-white/5 backdrop-blur-2xl" dir={direction}>
       {/* Club Header */}
-      <div className="flex flex-col items-center gap-4 mb-10 relative z-10">
+      <div className="flex flex-col items-center gap-4 mb-8 sm:mb-10 relative z-10">
         {appSettings?.club_logo_url ? (
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-surface/50 border border-white/10 p-2 overflow-hidden shadow-2xl">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-surface/50 border border-white/10 p-1.5 sm:p-2 overflow-hidden shadow-2xl">
             <img src={appSettings.club_logo_url} alt="Logo" className="w-full h-full object-contain" />
           </div>
         ) : (
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Trophy className="w-8 h-8 text-primary" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           </div>
         )}
         <div className="text-center">
-          <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">
+          <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter">
             {appSettings?.app_name || "Sports Booking"}
           </h1>
           {appSettings?.address && (
-            <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-muted mt-1">
-              <MapPin className="w-3 h-3" />
-              {appSettings.address}
+            <p className="flex items-center justify-center gap-1.5 text-[10px] sm:text-xs font-bold text-muted mt-1 px-4">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate max-w-[250px] sm:max-w-none">{appSettings.address}</span>
             </p>
           )}
         </div>
@@ -500,29 +500,29 @@ export function BookingFlow() {
               <p className="text-muted text-lg max-w-lg mx-auto">{t.reachYou}</p>
             </div>
             
-            <div className="max-w-2xl mx-auto grid gap-6">
+            <div className="max-w-2xl mx-auto grid gap-4 sm:gap-6">
               <div className="relative group">
                 <div className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} transition-transform group-focus-within:scale-110 z-10`}>
-                  <Users className="w-5 h-5 text-primary" />
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
                 <input 
                   type="text" 
                   placeholder={t.fullName} 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-2xl py-4 ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} text-foreground text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
+                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-6' : 'pl-11 sm:pl-12 pr-6'} text-foreground text-base sm:text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
                   required
                 />
               </div>
 
-              <div className="grid gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
+              <div className="grid gap-4 sm:gap-6">
+                <div className="space-y-1 sm:space-y-2">
+                  <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
                   <div className="flex gap-2 relative group">
                     <select 
                       value={phoneCode} 
                       onChange={(e) => setPhoneCode(e.target.value)}
-                      className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 text-foreground font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                      className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -536,22 +536,22 @@ export function BookingFlow() {
                       placeholder="123 456 7890" 
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
                       required
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted uppercase tracking-widest px-2">{t.whatsappNumber}</label>
+                <div className="space-y-1 sm:space-y-2">
+                  <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.whatsappNumber}</label>
                   <div className="flex gap-2 relative group">
-                    <div className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-green-500" />
+                    <div className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 flex items-center justify-center">
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                     </div>
                     <select 
                       value={whatsappCode} 
                       onChange={(e) => setWhatsappCode(e.target.value)}
-                      className="bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-3 text-foreground font-bold focus:border-primary outline-none appearance-none cursor-pointer"
+                      className="bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-2 sm:px-3 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -565,7 +565,7 @@ export function BookingFlow() {
                       placeholder="123 456 7890" 
                       value={whatsappNumber}
                       onChange={(e) => setWhatsappNumber(e.target.value)}
-                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      className="flex-1 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
                       required
                     />
                   </div>
@@ -574,13 +574,13 @@ export function BookingFlow() {
 
               <div className="relative group">
                 <div className={`absolute top-4 ${direction === 'rtl' ? 'right-4' : 'left-4'} z-10`}>
-                  <MessageSquare className="w-5 h-5 text-muted group-focus-within:text-primary transition-colors" />
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-muted group-focus-within:text-primary transition-colors" />
                 </div>
                 <textarea 
                   placeholder={t.specialRequests} 
                   value={specialRequests}
                   onChange={(e) => setSpecialRequests(e.target.value)}
-                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl ${direction === 'rtl' ? 'pr-12 pl-6' : 'pl-12 pr-6'} py-4 text-foreground placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[120px] transition-all relative z-0`} 
+                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-6' : 'pl-11 sm:pl-12 pr-6'} py-3 sm:py-4 text-foreground text-sm sm:text-base placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[100px] sm:min-h-[120px] transition-all relative z-0`} 
                 />
               </div>
             </div>
@@ -588,24 +588,24 @@ export function BookingFlow() {
         )}
 
         {step === 4 && (
-          <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
+          <div className="space-y-6 sm:space-y-10 animate-in fade-in zoom-in-95 duration-500">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-foreground mb-3 tracking-tighter">
+              <h2 className="text-2xl sm:text-4xl font-black text-foreground mb-2 sm:mb-3 tracking-tighter">
                 {language === 'ar' ? 'تأكيد الدفع' : 'Payment Confirmation'}
               </h2>
-              <div className="inline-flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full">
-                <span className="text-sm font-bold text-primary uppercase tracking-wider">{t.total}</span>
-                <span className="text-lg font-black text-primary">EGP {calculateTotal().toFixed(2)}</span>
+              <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 rounded-full">
+                <span className="text-[10px] sm:text-sm font-bold text-primary uppercase tracking-wider">{t.total}</span>
+                <span className="text-base sm:text-lg font-black text-primary">EGP {calculateTotal().toFixed(2)}</span>
               </div>
             </div>
             
-            <div className="max-w-2xl mx-auto space-y-8">
+            <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
               {/* Payment Type Tabs */}
               {(appSettings?.deposit_enabled ?? true) && (
-                <div className="flex p-1.5 bg-surface/30 backdrop-blur-md rounded-2xl border border-border/50">
+                <div className="flex p-1 bg-surface/30 backdrop-blur-md rounded-xl sm:rounded-2xl border border-border/50">
                   <button
                     onClick={() => setPaymentType('full')}
-                    className={`flex-1 py-3 px-6 rounded-xl font-black text-sm transition-all duration-300 ${
+                    className={`flex-1 py-2 sm:py-3 px-2 sm:px-6 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm transition-all duration-300 ${
                       paymentType === 'full' 
                       ? 'bg-primary text-white shadow-xl shadow-primary/20' 
                       : 'text-muted hover:text-foreground'
@@ -620,7 +620,7 @@ export function BookingFlow() {
                       const minDeposit = calculateTotal() * (minPercent / 100);
                       setPartialAmount(minDeposit);
                     }}
-                    className={`flex-1 py-3 px-6 rounded-xl font-black text-sm transition-all duration-300 ${
+                    className={`flex-1 py-2 sm:py-3 px-2 sm:px-6 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-sm transition-all duration-300 ${
                       paymentType === 'partial' 
                       ? 'bg-primary text-white shadow-xl shadow-primary/20' 
                       : 'text-muted hover:text-foreground'
@@ -632,12 +632,12 @@ export function BookingFlow() {
               )}
 
               {paymentType === 'partial' && (
-                <div className="space-y-3 animate-in slide-in-from-top-4">
+                <div className="space-y-2 sm:space-y-3 animate-in slide-in-from-top-4">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-sm font-bold text-foreground/80 uppercase tracking-widest">
-                      {language === 'ar' ? 'قيمة المبلغ الذي ستحوله' : 'Amount you will transfer'}
+                    <label className="text-[10px] sm:text-sm font-bold text-foreground/80 uppercase tracking-widest">
+                      {language === 'ar' ? 'قيمة التحويل' : 'Transfer Amount'}
                     </label>
-                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                    <span className="text-[8px] sm:text-[10px] font-bold text-primary bg-primary/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                       {language === 'ar' ? 'الحد الأدنى' : 'Min'} {appSettings?.min_deposit_percent ?? 10}%
                     </span>
                   </div>
@@ -652,42 +652,39 @@ export function BookingFlow() {
                         if (partialAmount < minDeposit) setPartialAmount(minDeposit);
                         if (partialAmount > calculateTotal()) setPartialAmount(calculateTotal());
                       }}
-                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl py-4 px-6 text-foreground text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
+                      className={`w-full bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-foreground text-xl sm:text-2xl font-black focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all`}
                     />
                   </div>
-                  <p className="text-[10px] text-muted px-2">
-                    {language === 'ar' ? '* الحد الأدنى للعربون هو' : '* Minimum deposit is'} EGP {(calculateTotal() * ((appSettings?.min_deposit_percent ?? 10) / 100)).toFixed(0)}
-                  </p>
                 </div>
               )}
 
               {/* Payment Method Switcher */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <button
                   onClick={() => setPaymentMethod('instapay')}
-                  className={`relative overflow-hidden p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                  className={`relative overflow-hidden p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
                     paymentMethod === 'instapay' 
                     ? 'border-primary bg-primary/10 shadow-xl' 
                     : 'border-border/50 bg-surface/30 hover:border-primary/30'
                   }`}
                 >
-                  <div className={`p-3 rounded-xl ${paymentMethod === 'instapay' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
-                    <CreditCard className="w-6 h-6" />
+                  <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${paymentMethod === 'instapay' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
+                    <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <span className="font-black text-sm tracking-tight">InstaPay</span>
+                  <span className="font-black text-xs sm:text-sm tracking-tight">InstaPay</span>
                 </button>
                 <button
                   onClick={() => setPaymentMethod('wallet')}
-                  className={`relative overflow-hidden p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                  className={`relative overflow-hidden p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
                     paymentMethod === 'wallet' 
                     ? 'border-primary bg-primary/10 shadow-xl' 
                     : 'border-border/50 bg-surface/30 hover:border-primary/30'
                   }`}
                 >
-                  <div className={`p-3 rounded-xl ${paymentMethod === 'wallet' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
-                    <Smartphone className="w-6 h-6" />
+                  <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${paymentMethod === 'wallet' ? 'bg-primary text-white' : 'bg-surface text-primary'}`}>
+                    <Smartphone className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <span className="font-black text-sm tracking-tight">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</span>
+                  <span className="font-black text-xs sm:text-sm tracking-tight">{language === 'ar' ? 'محفظة' : 'Wallet'}</span>
                 </button>
               </div>
 
