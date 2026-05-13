@@ -144,10 +144,13 @@ export function BookingFlow() {
         activity_id: selectedActivity?.id,
         activity_name: activityName,
         booking_date: selectedDate,
-        booking_time: selectedTime,
+        booking_time: selectedTimes.join(', '),
         duration: selectedDuration,
         players_count: playersCount,
         total_price: calculateTotal(),
+        amount_paid: paymentType === 'full' ? calculateTotal() : partialAmount,
+        payment_type: paymentType,
+        payment_method: paymentMethod,
         status: 'pending',
         payment_screenshot: screenshotUrl,
         special_requests: specialRequests || null,
@@ -656,7 +659,7 @@ export function BookingFlow() {
             disabled={
               submitting ||
               (step === 1 && !selectedActivity) || 
-              (step === 2 && (!selectedDate || !selectedTime || !selectedDuration)) ||
+              (step === 2 && (!selectedDate || selectedTimes.length === 0 || !selectedDuration)) ||
               (step === 3 && (!fullName || !phoneNumber || !whatsappNumber))
             }
             className={`px-8 py-2.5 rounded-xl font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${direction === 'rtl' ? 'mr-auto ml-0 flex-row-reverse' : 'ml-auto mr-0'}`}

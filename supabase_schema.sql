@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   duration INTEGER NOT NULL DEFAULT 60,
   players_count INTEGER DEFAULT 1,
   total_price NUMERIC DEFAULT 0,
+  amount_paid NUMERIC DEFAULT 0,
+  payment_type TEXT DEFAULT 'full', -- full, partial
+  payment_method TEXT DEFAULT 'instapay', -- instapay, wallet
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   rejection_reason TEXT,
   payment_screenshot TEXT,
