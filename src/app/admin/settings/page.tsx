@@ -28,7 +28,7 @@ export default function SettingsPage() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       if (data) {
         setSettings({
           app_name: data.app_name || "Sports Booking",
@@ -46,23 +46,35 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    // Upsert - update if exists, insert if not
-    const { data: existing } = await (supabase.from("app_settings") as any)
-      .select("id")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    try {
+      // Get the current record id if it exists
+      const { data: existing, error: fetchError } = await (supabase.from("app_settings") as any)
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (existing) {
-      await (supabase.from("app_settings") as any)
-        .update(settings)
-        .eq("id", existing.id);
-    } else {
-      await (supabase.from("app_settings") as any)
-        .insert([settings]);
+      if (fetchError) throw fetchError;
+
+      let result;
+      if (existing) {
+        result = await (supabase.from("app_settings") as any)
+          .update(settings)
+          .eq("id", existing.id);
+      } else {
+        result = await (supabase.from("app_settings") as any)
+          .insert([settings]);
+      }
+
+      if (result.error) throw result.error;
+
+      alert(language === 'ar' ? 'تم حفظ الإعدادات بنجاح ✅' : 'Settings saved ✅');
+    } catch (error: any) {
+      console.error("Save error:", error);
+      alert(language === 'ar' ? `فشل الحفظ: ${error.message}` : `Save failed: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    alert(language === 'ar' ? 'تم حفظ الإعدادات بنجاح ✅' : 'Settings saved ✅');
   };
 
   if (loading) {
