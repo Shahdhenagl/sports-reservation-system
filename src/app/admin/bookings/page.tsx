@@ -14,32 +14,39 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const supabase = createClient();
 
   const fetchBookings = async () => {
     setLoading(true);
+    setDebugInfo("جاري فحص البيانات...");
     try {
-      // Basic select to check what's in the table
+      // 1. Check Auth Status
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setDebugInfo("خطأ: أنت غير مسجل دخول في قاعدة البيانات.");
+      } else {
+        setDebugInfo(`تم تسجيل الدخول بنجاح: ${user.email}`);
+      }
+
+      // 2. Simple fetch bookings only (No join)
       const { data, error, count } = await (supabase.from("bookings") as any)
-        .select("*, customers(*)", { count: 'exact' });
+        .select("*", { count: 'exact' });
       
-      console.log("DB Check - Rows found:", count, "Data:", data);
+      if (error) {
+        setDebugInfo(prev => `${prev} | خطأ في جلب الحجوزات: ${error.message}`);
+        throw error;
+      }
+
+      setDebugInfo(prev => `${prev} | عدد الحجوزات في السيرفر: ${count}`);
       
-      if (error) throw error;
+      // 3. If bookings found, try to fetch with customers
+      const { data: fullData } = await (supabase.from("bookings") as any)
+        .select("*, customers(*)");
       
-      // Apply status filter locally for now to be safe
-      const filteredData = statusFilter === "all" 
-        ? (data || []) 
-        : (data || []).filter((b: any) => b.status === statusFilter);
-        
-      setBookings(filteredData);
+      setBookings(fullData || data || []);
     } catch (err: any) {
       console.error("Fetch error:", err);
-      // Fallback
-      const { data } = await (supabase.from("bookings") as any).select("*");
-      setBookings(data || []);
-    } finally {
-      console.error("Unexpected error:", err);
     } finally {
       setLoading(false);
     }
@@ -163,6 +170,11 @@ export default function BookingsPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Debug Section */}
+      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+        <p className="text-xs font-mono text-yellow-500">DEBUG: {debugInfo}</p>
       </div>
 
       <div className="glass rounded-2xl overflow-hidden border border-border/50">
