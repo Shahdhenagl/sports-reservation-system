@@ -43,6 +43,22 @@ export function BookingFlow() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappCode, setWhatsappCode] = useState("+20");
 
+  // Step 4 state
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -340,13 +356,28 @@ export function BookingFlow() {
                 <h3 className="text-lg font-semibold text-foreground mb-2">InstaPay</h3>
                 <p className="text-muted text-sm mb-4">{t.transferTo}: <strong>sportsclub@instapay</strong></p>
                 
-                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Upload className="w-6 h-6 text-primary" />
-                  </div>
-                  <p className="text-sm text-foreground font-medium">{t.uploadScreenshot}</p>
-                  <p className="text-xs text-muted mt-1">{t.fileTypes}</p>
-                </div>
+                <label className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer group block">
+                  <input 
+                    type="file" 
+                    accept="image/jpeg,image/png,image/webp" 
+                    onChange={handleFileUpload}
+                    className="hidden" 
+                  />
+                  {uploadPreview ? (
+                    <div className="space-y-3">
+                      <img src={uploadPreview} alt="Payment screenshot" className="max-h-48 mx-auto rounded-lg shadow-md" />
+                      <p className="text-sm text-primary font-medium">{language === 'ar' ? '✅ تم رفع الصورة - اضغط لتغييرها' : '✅ Uploaded - Click to change'}</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6 text-primary" />
+                      </div>
+                      <p className="text-sm text-foreground font-medium">{t.uploadScreenshot}</p>
+                      <p className="text-xs text-muted mt-1">{t.fileTypes}</p>
+                    </>
+                  )}
+                </label>
               </div>
             </div>
           </div>
