@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   amount_paid NUMERIC DEFAULT 0,
   payment_type TEXT DEFAULT 'full',
   payment_method TEXT DEFAULT 'instapay',
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'partially_paid')),
   rejection_reason TEXT,
   payment_screenshot TEXT,
   special_requests TEXT,
@@ -52,6 +52,10 @@ BEGIN
         ALTER TABLE bookings ADD COLUMN rejection_reason TEXT;
     END IF;
 END $$;
+
+-- Drop and recreate status check constraint to ensure partially_paid is allowed on existing databases
+ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check;
+ALTER TABLE bookings ADD CONSTRAINT bookings_status_check CHECK (status IN ('pending', 'approved', 'rejected', 'partially_paid'));
 
 -- 3. Enable RLS
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;

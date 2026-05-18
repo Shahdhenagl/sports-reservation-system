@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function BookingsPage() {
@@ -57,8 +57,9 @@ export default function BookingsPage() {
   }, [statusFilter]);
 
   const handleApprove = async (booking: any) => {
+    const nextStatus = booking.payment_type === 'partial' ? 'partially_paid' : 'approved';
     const { error: approveError } = await (supabase.from("bookings") as any)
-      .update({ status: "approved", updated_at: new Date().toISOString() })
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
       .eq("id", booking.id);
 
     if (approveError) {
@@ -94,9 +95,12 @@ export default function BookingsPage() {
       const remainingStrAr = booking.payment_type === 'partial' ? `\n💵 المبلغ المتبقي (عند الحضور): EGP ${remainingAmount}` : '';
       const remainingStrEn = booking.payment_type === 'partial' ? `\n💵 Remaining Balance (at venue): EGP ${remainingAmount}` : '';
 
+      const statusTitleAr = booking.payment_type === 'partial' ? 'تم قبول حجزك جزئياً (عربون)!' : 'تم قبول حجزك بالكامل!';
+      const statusTitleEn = booking.payment_type === 'partial' ? 'Booking Partially Approved (Deposit)!' : 'Booking Fully Approved!';
+
       const message = language === 'ar' 
-        ? `✅ *تم قبول حجزك!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})${remainingStrAr}\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
-        : `✅ *Booking Approved!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})${remainingStrEn}\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
+        ? `✅ *${statusTitleAr}*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})${remainingStrAr}\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
+        : `✅ *${statusTitleEn}*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})${remainingStrEn}\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
       window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
@@ -134,6 +138,34 @@ export default function BookingsPage() {
     fetchBookings();
   };
 
+  const handleCollectRemaining = async (booking: any) => {
+    const { error: updateError } = await (supabase.from("bookings") as any)
+      .update({ 
+        status: "approved", 
+        amount_paid: booking.total_price || 0,
+        updated_at: new Date().toISOString() 
+      })
+      .eq("id", booking.id);
+
+    if (updateError) {
+      alert(language === 'ar' ? `حدث خطأ أثناء تحصيل باقي المبلغ: ${updateError.message}` : `Error collecting remaining amount: ${updateError.message}`);
+      return;
+    }
+
+    // Open WhatsApp with final confirmation message
+    const customer = booking.customers;
+    if (customer) {
+      const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
+      const message = language === 'ar' 
+        ? `✅ *تم دفع حجزك بالكامل!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 الحالة: تم سداد باقي المبلغ بنجاح ودفع الحجز بالكامل! 🎉\n\nنتمنى لك وقتاً ممتعاً! 🎉`
+        : `✅ *Booking Fully Paid!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Status: Remaining balance paid successfully, booking is fully paid! 🎉\n\nEnjoy your game! 🎉`;
+      window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    setSelectedBooking(null);
+    fetchBookings();
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -141,6 +173,13 @@ export default function BookingsPage() {
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
             <Clock className="w-3 h-3" />
             {language === 'ar' ? 'في الانتظار' : 'Pending'}
+          </span>
+        );
+      case 'partially_paid':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
+            <Clock className="w-3 h-3" />
+            {language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid'}
           </span>
         );
       case 'approved':
@@ -175,6 +214,7 @@ export default function BookingsPage() {
           {[
             { value: 'all', label: language === 'ar' ? 'الكل' : 'All' },
             { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
+            { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
             { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
             { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
           ].map((filter) => (
@@ -223,26 +263,28 @@ export default function BookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((booking) => (
-                  <tr key={booking.id} className="border-b border-border/30 hover:bg-surface/30 transition-colors">
-                    <td className="px-4 py-3 font-mono font-semibold text-primary">{booking.booking_ref}</td>
-                    <td className="px-4 py-3 text-foreground">{booking.customers?.full_name || '-'}</td>
-                    <td className="px-4 py-3 text-foreground">{booking.activity_name || '-'}</td>
-                    <td className="px-4 py-3 text-foreground">{booking.booking_date}</td>
-                    <td className="px-4 py-3 text-foreground">{booking.booking_time}</td>
-                    <td className="px-4 py-3 text-foreground font-medium">EGP {booking.total_price || 0}</td>
-                    <td className="px-4 py-3">{getStatusBadge(booking.status)}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => { setSelectedBooking(booking); setRejectionReason(""); }}
-                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                        title={language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {bookings
+                  .filter((booking) => statusFilter === 'all' || booking.status === statusFilter)
+                  .map((booking) => (
+                    <tr key={booking.id} className="border-b border-border/30 hover:bg-surface/30 transition-colors">
+                      <td className="px-4 py-3 font-mono font-semibold text-primary">{booking.booking_ref}</td>
+                      <td className="px-4 py-3 text-foreground">{booking.customers?.full_name || '-'}</td>
+                      <td className="px-4 py-3 text-foreground">{booking.activity_name || '-'}</td>
+                      <td className="px-4 py-3 text-foreground">{booking.booking_date}</td>
+                      <td className="px-4 py-3 text-foreground">{booking.booking_time}</td>
+                      <td className="px-4 py-3 text-foreground font-medium">EGP {booking.total_price || 0}</td>
+                      <td className="px-4 py-3">{getStatusBadge(booking.status)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => { setSelectedBooking(booking); setRejectionReason(""); }}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          title={language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -393,6 +435,19 @@ export default function BookingsPage() {
                       {language === 'ar' ? 'رفض الحجز' : 'Reject'}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Actions - for partially paid bookings to collect remaining balance */}
+              {selectedBooking.status === 'partially_paid' && (
+                <div className="pt-4 border-t border-border">
+                  <button
+                    onClick={() => handleCollectRemaining(selectedBooking)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 mb-3"
+                  >
+                    <DollarSign className="w-5 h-5" />
+                    {language === 'ar' ? 'تحصيل باقي المبلغ بالكامل' : 'Collect Remaining Balance'}
+                  </button>
                 </div>
               )}
 
