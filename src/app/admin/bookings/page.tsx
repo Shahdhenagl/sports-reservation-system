@@ -90,9 +90,13 @@ export default function BookingsPage() {
       const paymentTypeStr = booking.payment_type === 'full' ? 'كامل المبلغ' : 'عربون / دفعة جزئية';
       const paymentMethodStr = booking.payment_method === 'instapay' ? 'InstaPay' : 'محفظة إلكترونية';
 
+      const remainingAmount = (booking.total_price || 0) - (booking.amount_paid || 0);
+      const remainingStrAr = booking.payment_type === 'partial' ? `\n💵 المبلغ المتبقي (عند الحضور): EGP ${remainingAmount}` : '';
+      const remainingStrEn = booking.payment_type === 'partial' ? `\n💵 Remaining Balance (at venue): EGP ${remainingAmount}` : '';
+
       const message = language === 'ar' 
-        ? `✅ *تم قبول حجزك!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
-        : `✅ *Booking Approved!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
+        ? `✅ *تم قبول حجزك!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})${remainingStrAr}\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
+        : `✅ *Booking Approved!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})${remainingStrEn}\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
       window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
@@ -321,6 +325,13 @@ export default function BookingsPage() {
                     {selectedBooking.payment_method === 'instapay' ? 'InstaPay' : (language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet')}
                   </span>
                 </div>
+
+                {selectedBooking.payment_type === 'partial' && (
+                  <div className="flex justify-between items-center text-xs text-red-500 font-semibold pt-2 border-t border-primary/10">
+                    <span>{language === 'ar' ? 'المبلغ المتبقي للتحصيل' : 'Remaining Balance'}</span>
+                    <span>EGP {(selectedBooking.total_price || 0) - (selectedBooking.amount_paid || 0)}</span>
+                  </div>
+                )}
               </div>
 
               {selectedBooking.special_requests && (
