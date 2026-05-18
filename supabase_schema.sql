@@ -48,6 +48,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='payment_method') THEN
         ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT 'instapay';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='rejection_reason') THEN
+        ALTER TABLE bookings ADD COLUMN rejection_reason TEXT;
+    END IF;
 END $$;
 
 -- 3. Enable RLS

@@ -57,9 +57,14 @@ export default function BookingsPage() {
   }, [statusFilter]);
 
   const handleApprove = async (booking: any) => {
-    await (supabase.from("bookings") as any)
+    const { error: approveError } = await (supabase.from("bookings") as any)
       .update({ status: "approved", updated_at: new Date().toISOString() })
       .eq("id", booking.id);
+
+    if (approveError) {
+      alert(language === 'ar' ? `حدث خطأ أثناء قبول الحجز: ${approveError.message}` : `Error approving booking: ${approveError.message}`);
+      return;
+    }
 
     // Update customer total_payments
     if (booking.customer_id) {
@@ -69,18 +74,25 @@ export default function BookingsPage() {
         .single();
       
       const currentTotal = customerData?.total_payments || 0;
-      await (supabase.from("customers") as any)
+      const { error: customerError } = await (supabase.from("customers") as any)
         .update({ total_payments: currentTotal + (booking.total_price || 0), updated_at: new Date().toISOString() })
         .eq("id", booking.customer_id);
+
+      if (customerError) {
+        console.error("Error updating customer total payments:", customerError);
+      }
     }
 
     // Open WhatsApp with approval message
     const customer = booking.customers;
     if (customer) {
       const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
+      const paymentTypeStr = booking.payment_type === 'full' ? 'كامل المبلغ' : 'عربون / دفعة جزئية';
+      const paymentMethodStr = booking.payment_method === 'instapay' ? 'InstaPay' : 'محفظة إلكترونية';
+
       const message = language === 'ar' 
-        ? `✅ *تم قبول حجزك!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 المبلغ: EGP ${booking.total_price}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
-        : `✅ *Booking Approved!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total: EGP ${booking.total_price}\n\nEnjoy your game! 🎉`;
+        ? `✅ *تم قبول حجزك!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
+        : `✅ *Booking Approved!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
       window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
@@ -94,17 +106,22 @@ export default function BookingsPage() {
       return;
     }
 
-    await (supabase.from("bookings") as any)
+    const { error: rejectError } = await (supabase.from("bookings") as any)
       .update({ status: "rejected", rejection_reason: rejectionReason, updated_at: new Date().toISOString() })
       .eq("id", booking.id);
+
+    if (rejectError) {
+      alert(language === 'ar' ? `حدث خطأ أثناء رفض الحجز: ${rejectError.message}` : `Error rejecting booking: ${rejectError.message}`);
+      return;
+    }
 
     // Open WhatsApp with rejection message
     const customer = booking.customers;
     if (customer) {
       const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
       const message = language === 'ar' 
-        ? `❌ *تم رفض حجزك*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n\n📝 السبب: ${rejectionReason}\n\nيمكنك المحاولة مرة أخرى أو التواصل معنا.`
-        : `❌ *Booking Rejected*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n\n📝 Reason: ${rejectionReason}\n\nPlease try again or contact us.`;
+        ? `❌ *تم رفض حجزك*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع (المسترد): EGP ${booking.amount_paid || 0}\n📝 السبب: ${rejectionReason}\n\nيمكنك المحاولة مرة أخرى أو التواصل معنا.`
+        : `❌ *Booking Rejected*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid (Refunded): EGP ${booking.amount_paid || 0}\n📝 Reason: ${rejectionReason}\n\nPlease try again or contact us.`;
       window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
     }
 
@@ -282,9 +299,28 @@ export default function BookingsPage() {
                 </div>
               </div>
 
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex justify-between items-center">
-                <span className="text-sm text-muted">{language === 'ar' ? 'إجمالي المبلغ' : 'Total Amount'}</span>
-                <span className="text-xl font-bold text-primary">EGP {selectedBooking.total_price || 0}</span>
+              <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 space-y-3">
+                <div className="flex justify-between items-center pb-2 border-b border-primary/10">
+                  <span className="text-sm font-semibold text-foreground/80">{language === 'ar' ? 'إجمالي سعر الحجز' : 'Total Price'}</span>
+                  <span className="text-lg font-bold text-primary">EGP {selectedBooking.total_price || 0}</span>
+                </div>
+                
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted">{language === 'ar' ? 'المبلغ المدفوع' : 'Amount Paid'}</span>
+                  <span className="font-semibold text-foreground">
+                    EGP {selectedBooking.amount_paid || 0} 
+                    <span className="text-[10px] text-muted ml-1">
+                      ({selectedBooking.payment_type === 'full' ? (language === 'ar' ? 'كامل' : 'Full') : (language === 'ar' ? 'عربون' : 'Deposit')})
+                    </span>
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted">{language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</span>
+                  <span className="font-semibold text-foreground">
+                    {selectedBooking.payment_method === 'instapay' ? 'InstaPay' : (language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet')}
+                  </span>
+                </div>
               </div>
 
               {selectedBooking.special_requests && (
