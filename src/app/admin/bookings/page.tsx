@@ -444,45 +444,46 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-6" dir={direction}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.bookings}</h1>
-          <p className="text-muted">{t.bookingsSubtitle}</p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Status Filter */}
-          <div className="flex gap-2">
-            {[
-              { value: 'all', label: language === 'ar' ? 'الكل' : 'All' },
-              { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
-              { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
-              { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
-              { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
-            ].map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setStatusFilter(filter.value)}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                  statusFilter === filter.value 
-                    ? 'bg-primary text-white shadow-md' 
-                    : 'bg-surface text-muted hover:bg-surface-hover'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+      <div className="space-y-6 print:hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.bookings}</h1>
+            <p className="text-muted">{t.bookingsSubtitle}</p>
           </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status Filter */}
+            <div className="flex gap-2">
+              {[
+                { value: 'all', label: language === 'ar' ? 'الكل' : 'All' },
+                { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
+                { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
+                { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
+                { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setStatusFilter(filter.value)}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    statusFilter === filter.value 
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-surface text-muted hover:bg-surface-hover'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
 
-          <button
-            onClick={() => window.print()}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 text-sm"
-          >
-            <Printer className="w-4 h-4" />
-            {language === 'ar' ? 'تصدير تقرير A4 PDF' : 'Export A4 PDF Report'}
-          </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 text-sm"
+            >
+              <Printer className="w-4 h-4" />
+              {language === 'ar' ? 'تصدير PDF' : 'Export PDF'}
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Searching and Date filter row */}
       <div className="flex flex-col gap-4 space-y-3 print:hidden">
@@ -1011,6 +1012,7 @@ export default function BookingsPage() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Print-Only A4 Bookings Report Layout */}
       <div className="hidden print:block print-report p-8 space-y-6" dir={direction}>
@@ -1095,27 +1097,61 @@ export default function BookingsPage() {
       {/* Global CSS Style tag to handle A4 Print media nicely */}
       <style>{`
         @media print {
-          body {
+          html, body {
             background: white !important;
             color: black !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
-          /* Hide the sidebar, navbar, filters, buttons, etc. */
-          body > *:not(.print-report) {
+          
+          /* Hide all Next.js screen-only layout wrappers & decorations */
+          aside,
+          nav,
+          header,
+          button,
+          .print\:hidden {
             display: none !important;
           }
+
+          /* Force sidebar container in layout to hide */
+          div[class*="w-64"] {
+            display: none !important;
+          }
+
+          /* Reset absolute/flex/overflow layout limitations of Next.js */
+          div, main, section {
+            height: auto !important;
+            overflow: visible !important;
+            position: relative !important;
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+          }
+
+          /* Force the print report to show beautifully */
           .print-report {
             display: block !important;
             width: 100% !important;
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            margin: 0 !important;
             padding: 20px !important;
+            margin: 0 !important;
+            background: white !important;
+            color: black !important;
+            z-index: 9999999 !important;
           }
+          
           @page {
             size: A4 portrait;
             margin: 1.5cm;
           }
+          
           .page-break-inside-avoid {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
