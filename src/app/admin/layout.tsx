@@ -13,7 +13,8 @@ import {
   X,
   Languages,
   Trophy,
-  Users
+  Users,
+  Coins
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -47,6 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: t.activities, href: "/admin/activities", icon: Trophy },
     { name: t.bookings, href: "/admin/bookings", icon: CalendarDays },
     { name: language === 'ar' ? 'العملاء' : 'Customers', href: "/admin/customers", icon: Users },
+    { name: language === 'ar' ? 'التحصيلات المالية' : 'Financial Collections', href: "/admin/collections", icon: Coins },
     { name: t.resources, href: "/admin/resources", icon: MapPin },
     { name: t.settings, href: "/admin/settings", icon: Settings },
   ];

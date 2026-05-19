@@ -86,3 +86,28 @@ CREATE POLICY "Allow select for anon" ON bookings FOR SELECT USING (true);
 
 -- 5. Enable Realtime for bookings
 ALTER PUBLICATION supabase_realtime ADD TABLE bookings;
+
+-- 6. Create transactions table for collection & refund tracking
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+  booking_ref TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('collection', 'refund')),
+  amount NUMERIC NOT NULL,
+  method TEXT NOT NULL CHECK (method IN ('instapay', 'wallet', 'cash')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS for transactions
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+
+-- Re-create Policies for transactions
+DROP POLICY IF EXISTS "Allow all for authenticated" ON transactions;
+DROP POLICY IF EXISTS "Allow insert for anon" ON transactions;
+DROP POLICY IF EXISTS "Allow select for anon" ON transactions;
+CREATE POLICY "Allow all for authenticated" ON transactions FOR ALL USING (true);
+CREATE POLICY "Allow insert for anon" ON transactions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow select for anon" ON transactions FOR SELECT USING (true);
+
+-- Enable Realtime for transactions
+ALTER PUBLICATION supabase_realtime ADD TABLE transactions;

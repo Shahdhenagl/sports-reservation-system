@@ -14,6 +14,17 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
+  // Collection Modal State
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+  const [collectAmount, setCollectAmount] = useState("");
+  const [collectMethod, setCollectMethod] = useState("instapay");
+
+  // Refund Modal State
+  const [refundModalOpen, setRefundModalOpen] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundMethod, setRefundMethod] = useState("instapay");
+
   const supabase = createClient();
 
   const fetchBookings = async (background = false) => {
@@ -54,56 +65,186 @@ export default function BookingsPage() {
     };
   }, []);
 
-  const handleApprove = async (booking: any) => {
-    const nextStatus = booking.payment_type === 'partial' ? 'partially_paid' : 'approved';
-    const { error: approveError } = await (supabase.from("bookings") as any)
-      .update({ status: nextStatus, updated_at: new Date().toISOString() })
-      .eq("id", booking.id);
-
-    if (approveError) {
-      alert(language === 'ar' ? `حدث خطأ أثناء قبول الحجز: ${approveError.message}` : `Error approving booking: ${approveError.message}`);
+  const handleCollectionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+    
+    const amount = parseFloat(collectAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert(language === 'ar' ? "يرجى إدخال مبلغ صحيح" : "Please enter a valid amount");
       return;
     }
 
-    // Update customer total_payments
-    if (booking.customer_id) {
-      const { data: customerData } = await (supabase.from("customers") as any)
-        .select("total_payments")
-        .eq("id", booking.customer_id)
-        .single();
-      
-      const currentTotal = customerData?.total_payments || 0;
-      const { error: customerError } = await (supabase.from("customers") as any)
-        .update({ total_payments: currentTotal + (booking.total_price || 0), updated_at: new Date().toISOString() })
-        .eq("id", booking.customer_id);
+    const currentPaid = selectedBooking.amount_paid || 0;
+    const newPaid = currentPaid + amount;
+    
+    let nextStatus = selectedBooking.status;
+    if (newPaid >= (selectedBooking.total_price || 0)) {
+      nextStatus = 'approved';
+    } else if (newPaid > 0) {
+      nextStatus = 'partially_paid';
+    }
 
-      if (customerError) {
-        console.error("Error updating customer total payments:", customerError);
+    try {
+      // 1. Update Booking
+      const { error: bookingErr } = await (supabase.from("bookings") as any)
+        .update({
+          status: nextStatus,
+          amount_paid: newPaid,
+          payment_method: collectMethod,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedBooking.id);
+
+      if (bookingErr) throw bookingErr;
+
+      // 2. Log Transaction
+      const { error: txErr } = await (supabase.from("transactions") as any)
+        .insert([{
+          booking_id: selectedBooking.id,
+          booking_ref: selectedBooking.booking_ref,
+          type: 'collection',
+          amount: amount,
+          method: collectMethod
+        }]);
+
+      if (txErr) {
+        console.error("Error creating transaction record:", txErr);
       }
+
+      // 3. Update Customer's total_payments
+      if (selectedBooking.customer_id) {
+        const { data: customerData } = await (supabase.from("customers") as any)
+          .select("total_payments")
+          .eq("id", selectedBooking.customer_id)
+          .single();
+        
+        const currentTotal = parseFloat(customerData?.total_payments || 0);
+        await (supabase.from("customers") as any)
+          .update({
+            total_payments: currentTotal + amount,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", selectedBooking.customer_id);
+      }
+
+      // Send WhatsApp approval message
+      const customer = selectedBooking.customers;
+      if (customer) {
+        const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
+        const paymentMethodStr = collectMethod === 'instapay' ? 'InstaPay' : (collectMethod === 'wallet' ? 'محفظة إلكترونية' : 'كاش');
+        const remainingAmount = Math.max(0, (selectedBooking.total_price || 0) - newPaid);
+        const remainingStrAr = nextStatus === 'partially_paid' ? `\n💵 المبلغ المتبقي (عند الحضور): EGP ${remainingAmount}` : '';
+        const remainingStrEn = nextStatus === 'partially_paid' ? `\n💵 Remaining Balance: EGP ${remainingAmount}` : '';
+        
+        const statusTitleAr = nextStatus === 'approved' ? 'تم تأكيد دفع حجزك بالكامل!' : 'تم قبول حجزك جزئياً واستلام الدفعة!';
+        const statusTitleEn = nextStatus === 'approved' ? 'Booking Fully Paid & Approved!' : 'Booking Partially Paid (Deposit Confirmed)!';
+
+        const message = language === 'ar' 
+          ? `✅ *${statusTitleAr}*\n\n📋 رقم الحجز: ${selectedBooking.booking_ref}\n⚽ النشاط: ${selectedBooking.activity_name}\n📅 التاريخ: ${selectedBooking.booking_date}\n⏰ الوقت: ${selectedBooking.booking_time}\n💰 إجمالي المبلغ: EGP ${selectedBooking.total_price || 0}\n💳 تم استلام: EGP ${amount} (${paymentMethodStr})\n💵 إجمالي المدفوع: EGP ${newPaid}${remainingStrAr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
+          : `✅ *${statusTitleEn}*\n\n📋 Ref: ${selectedBooking.booking_ref}\n⚽ Activity: ${selectedBooking.activity_name}\n📅 Date: ${selectedBooking.booking_date}\n⏰ Time: ${selectedBooking.booking_time}\n💰 Total Amount: EGP ${selectedBooking.total_price || 0}\n💳 Received: EGP ${amount} (${collectMethod})\n💵 Total Paid: EGP ${newPaid}${remainingStrEn}\n\nEnjoy your game! 🎉`;
+        
+        window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+      }
+
+      alert(language === 'ar' ? "تم تسجيل التحصيل بنجاح" : "Collection recorded successfully");
+      setCollectionModalOpen(false);
+      setSelectedBooking(null);
+      fetchBookings();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleRefundSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+    
+    const amount = parseFloat(refundAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert(language === 'ar' ? "يرجى إدخال مبلغ صحيح" : "Please enter a valid amount");
+      return;
     }
 
-    // Open WhatsApp with approval message
-    const customer = booking.customers;
-    if (customer) {
-      const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
-      const paymentTypeStr = booking.payment_type === 'full' ? 'كامل المبلغ' : 'عربون / دفعة جزئية';
-      const paymentMethodStr = booking.payment_method === 'instapay' ? 'InstaPay' : 'محفظة إلكترونية';
-
-      const remainingAmount = (booking.total_price || 0) - (booking.amount_paid || 0);
-      const remainingStrAr = booking.payment_type === 'partial' ? `\n💵 المبلغ المتبقي (عند الحضور): EGP ${remainingAmount}` : '';
-      const remainingStrEn = booking.payment_type === 'partial' ? `\n💵 Remaining Balance (at venue): EGP ${remainingAmount}` : '';
-
-      const statusTitleAr = booking.payment_type === 'partial' ? 'تم قبول حجزك جزئياً (عربون)!' : 'تم قبول حجزك بالكامل!';
-      const statusTitleEn = booking.payment_type === 'partial' ? 'Booking Partially Approved (Deposit)!' : 'Booking Fully Approved!';
-
-      const message = language === 'ar' 
-        ? `✅ *${statusTitleAr}*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع: EGP ${booking.amount_paid || 0} (${paymentTypeStr})${remainingStrAr}\n📱 طريقة الدفع: ${paymentMethodStr}\n\nنتمنى لك وقتاً ممتعاً! 🎉`
-        : `✅ *${statusTitleEn}*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid: EGP ${booking.amount_paid || 0} (${booking.payment_type === 'full' ? 'Full' : 'Deposit'})${remainingStrEn}\n📱 Payment Method: ${booking.payment_method === 'instapay' ? 'InstaPay' : 'Wallet'}\n\nEnjoy your game! 🎉`;
-      window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+    const currentPaid = selectedBooking.amount_paid || 0;
+    if (amount > currentPaid) {
+      alert(language === 'ar' ? `الحد الأقصى للرد هو المبلغ المدفوع: EGP ${currentPaid}` : `Max refund allowed is the amount paid: EGP ${currentPaid}`);
+      return;
     }
 
-    setSelectedBooking(null);
-    fetchBookings();
+    const newPaid = Math.max(0, currentPaid - amount);
+    
+    let nextStatus = selectedBooking.status;
+    if (newPaid === 0) {
+      nextStatus = 'pending';
+    } else if (newPaid < (selectedBooking.total_price || 0)) {
+      nextStatus = 'partially_paid';
+    }
+
+    try {
+      // 1. Update Booking
+      const { error: bookingErr } = await (supabase.from("bookings") as any)
+        .update({
+          status: nextStatus,
+          amount_paid: newPaid,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedBooking.id);
+
+      if (bookingErr) throw bookingErr;
+
+      // 2. Log Transaction
+      const { error: txErr } = await (supabase.from("transactions") as any)
+        .insert([{
+          booking_id: selectedBooking.id,
+          booking_ref: selectedBooking.booking_ref,
+          type: 'refund',
+          amount: amount,
+          method: refundMethod
+        }]);
+
+      if (txErr) {
+        console.error("Error creating transaction record:", txErr);
+      }
+
+      // 3. Update Customer's total_payments
+      if (selectedBooking.customer_id) {
+        const { data: customerData } = await (supabase.from("customers") as any)
+          .select("total_payments")
+          .eq("id", selectedBooking.customer_id)
+          .single();
+        
+        const currentTotal = parseFloat(customerData?.total_payments || 0);
+        await (supabase.from("customers") as any)
+          .update({
+            total_payments: Math.max(0, currentTotal - amount),
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", selectedBooking.customer_id);
+      }
+
+      // Send WhatsApp refund message
+      const customer = selectedBooking.customers;
+      if (customer) {
+        const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
+        const paymentMethodStr = refundMethod === 'instapay' ? 'InstaPay' : (refundMethod === 'wallet' ? 'محفظة إلكترونية' : 'كاش');
+        
+        const message = language === 'ar' 
+          ? `💸 *تم إرجاع مبلغ لحجزك*\n\n📋 رقم الحجز: ${selectedBooking.booking_ref}\n⚽ النشاط: ${selectedBooking.activity_name}\n📅 التاريخ: ${selectedBooking.booking_date}\n💰 إجمالي سعر الحجز: EGP ${selectedBooking.total_price || 0}\n💵 المبلغ المسترد: EGP ${amount} (${paymentMethodStr})\n💳 المتبقي المدفوع بالحجز: EGP ${newPaid}\n\nتمت عملية الاسترداد بنجاح! 💸`
+          : `💸 *Refund Issued for your Booking*\n\n📋 Ref: ${selectedBooking.booking_ref}\n⚽ Activity: ${selectedBooking.activity_name}\n📅 Date: ${selectedBooking.booking_date}\n💰 Total Amount: EGP ${selectedBooking.total_price || 0}\n💵 Refunded Amount: EGP ${amount} (${refundMethod})\n💳 Balance Left Paid: EGP ${newPaid}\n\nRefund processed successfully! 💸`;
+        
+        window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+      }
+
+      alert(language === 'ar' ? "تم تسجيل الاسترداد بنجاح" : "Refund recorded successfully");
+      setRefundModalOpen(false);
+      setSelectedBooking(null);
+      fetchBookings();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error: ${err.message}`);
+    }
   };
 
   const handleReject = async (booking: any) => {
@@ -136,33 +277,7 @@ export default function BookingsPage() {
     fetchBookings();
   };
 
-  const handleCollectRemaining = async (booking: any) => {
-    const { error: updateError } = await (supabase.from("bookings") as any)
-      .update({ 
-        status: "approved", 
-        amount_paid: booking.total_price || 0,
-        updated_at: new Date().toISOString() 
-      })
-      .eq("id", booking.id);
-
-    if (updateError) {
-      alert(language === 'ar' ? `حدث خطأ أثناء تحصيل باقي المبلغ: ${updateError.message}` : `Error collecting remaining amount: ${updateError.message}`);
-      return;
-    }
-
-    // Open WhatsApp with final confirmation message
-    const customer = booking.customers;
-    if (customer) {
-      const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
-      const message = language === 'ar' 
-        ? `✅ *تم دفع حجزك بالكامل!*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 الحالة: تم سداد باقي المبلغ بنجاح ودفع الحجز بالكامل! 🎉\n\nنتمنى لك وقتاً ممتعاً! 🎉`
-        : `✅ *Booking Fully Paid!*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Status: Remaining balance paid successfully, booking is fully paid! 🎉\n\nEnjoy your game! 🎉`;
-      window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
-    }
-
-    setSelectedBooking(null);
-    fetchBookings();
-  };
+  // Removed legacy direct collection helpers in favor of the new unified Collection/Refund Sub-Modal workflow
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -407,11 +522,15 @@ export default function BookingsPage() {
                 <div className="space-y-4 pt-4 border-t border-border">
                   <div className="flex gap-3">
                     <button
-                      onClick={() => handleApprove(selectedBooking)}
+                      onClick={() => {
+                        setCollectAmount(((selectedBooking.total_price || 0) - (selectedBooking.amount_paid || 0)).toString());
+                        setCollectMethod(selectedBooking.payment_method || "instapay");
+                        setCollectionModalOpen(true);
+                      }}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20"
                     >
                       <CheckCircle2 className="w-5 h-5" />
-                      {language === 'ar' ? 'قبول الحجز' : 'Approve'}
+                      {language === 'ar' ? 'قبول الحجز وتأكيد الدفعة' : 'Approve & Confirm Payment'}
                     </button>
                   </div>
 
@@ -433,16 +552,36 @@ export default function BookingsPage() {
                 </div>
               )}
 
-              {/* Actions - for partially paid bookings to collect remaining balance */}
-              {selectedBooking.status === 'partially_paid' && (
-                <div className="pt-4 border-t border-border">
-                  <button
-                    onClick={() => handleCollectRemaining(selectedBooking)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 mb-3"
-                  >
-                    <DollarSign className="w-5 h-5" />
-                    {language === 'ar' ? 'تحصيل باقي المبلغ بالكامل' : 'Collect Remaining Balance'}
-                  </button>
+              {/* Actions - for approved or partially paid bookings */}
+              {(selectedBooking.status === 'approved' || selectedBooking.status === 'partially_paid') && (
+                <div className="pt-4 border-t border-border space-y-3">
+                  {selectedBooking.status === 'partially_paid' && (
+                    <button
+                      onClick={() => {
+                        setCollectAmount(((selectedBooking.total_price || 0) - (selectedBooking.amount_paid || 0)).toString());
+                        setCollectMethod(selectedBooking.payment_method || "instapay");
+                        setCollectionModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                    >
+                      <DollarSign className="w-5 h-5" />
+                      {language === 'ar' ? 'تأكيد تحصيل مبلغ إضافي' : 'Confirm Additional Collection'}
+                    </button>
+                  )}
+
+                  {selectedBooking.amount_paid > 0 && (
+                    <button
+                      onClick={() => {
+                        setRefundAmount((selectedBooking.amount_paid || 0).toString());
+                        setRefundMethod("instapay");
+                        setRefundModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600/10 text-red-600 border border-red-600/20 rounded-xl font-medium hover:bg-red-600/20 hover:text-red-700 transition-colors"
+                    >
+                      <DollarSign className="w-5 h-5" />
+                      {language === 'ar' ? 'إجراء رد مبلغ (استرداد)' : 'Issue Refund'}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -460,6 +599,141 @@ export default function BookingsPage() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Collection Sub-Modal */}
+      {collectionModalOpen && selectedBooking && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full p-6 space-y-4" dir={direction}>
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h4 className="text-lg font-bold text-foreground">
+                {language === 'ar' ? 'تأكيد تحصيل مبلغ' : 'Confirm Collection'}
+              </h4>
+              <button onClick={() => setCollectionModalOpen(false)} className="p-1.5 text-muted hover:text-foreground hover:bg-surface-hover rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCollectionSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted">{language === 'ar' ? 'رقم الحجز' : 'Booking Ref'}</p>
+                <p className="text-sm font-bold text-foreground font-mono">{selectedBooking.booking_ref}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'المبلغ المستلم (EGP)' : 'Amount Received (EGP)'}</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required 
+                  value={collectAmount}
+                  onChange={(e) => setCollectAmount(e.target.value)}
+                  className={`w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                />
+                <p className="text-[10px] text-muted">
+                  {language === 'ar' ? `إجمالي المطلوب: EGP ${selectedBooking.total_price || 0} | المدفوع مسبقاً: EGP ${selectedBooking.amount_paid || 0}` : `Total Due: EGP ${selectedBooking.total_price || 0} | Paid So Far: EGP ${selectedBooking.amount_paid || 0}`}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'طريقة التحصيل' : 'Collection Method'}</label>
+                <select 
+                  value={collectMethod}
+                  onChange={(e) => setCollectMethod(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
+                >
+                  <option value="instapay">InstaPay</option>
+                  <option value="wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
+                  <option value="cash">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-3 border-t border-border">
+                <button 
+                  type="button" 
+                  onClick={() => setCollectionModalOpen(false)} 
+                  className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:bg-surface-hover transition-colors"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20"
+                >
+                  {language === 'ar' ? 'تأكيد الاستلام' : 'Confirm Receipt'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Sub-Modal */}
+      {refundModalOpen && selectedBooking && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full p-6 space-y-4" dir={direction}>
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h4 className="text-lg font-bold text-foreground">
+                {language === 'ar' ? 'إجراء رد مبلغ للعميل' : 'Issue Refund to Customer'}
+              </h4>
+              <button onClick={() => setRefundModalOpen(false)} className="p-1.5 text-muted hover:text-foreground hover:bg-surface-hover rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRefundSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted">{language === 'ar' ? 'رقم الحجز' : 'Booking Ref'}</p>
+                <p className="text-sm font-bold text-foreground font-mono">{selectedBooking.booking_ref}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'المبلغ المراد رده (EGP)' : 'Amount to Refund (EGP)'}</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required 
+                  max={selectedBooking.amount_paid}
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className={`w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                />
+                <p className="text-[10px] text-muted">
+                  {language === 'ar' ? `المبلغ المدفوع حالياً: EGP ${selectedBooking.amount_paid || 0}` : `Amount Paid Currently: EGP ${selectedBooking.amount_paid || 0}`}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'طريقة الرد' : 'Refund Method'}</label>
+                <select 
+                  value={refundMethod}
+                  onChange={(e) => setRefundMethod(e.target.value)}
+                  className="w-full bg-surface border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
+                >
+                  <option value="instapay">InstaPay</option>
+                  <option value="wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
+                  <option value="cash">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-3 border-t border-border">
+                <button 
+                  type="button" 
+                  onClick={() => setRefundModalOpen(false)} 
+                  className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:bg-surface-hover transition-colors"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+                >
+                  {language === 'ar' ? 'تأكيد الرد' : 'Confirm Refund'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
