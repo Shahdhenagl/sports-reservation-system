@@ -10,12 +10,14 @@ export async function addActivityAction(formData: FormData) {
     const name_ar = formData.get("name_ar") as string;
     const name_en = formData.get("name_en") as string;
     const icon_name = formData.get("icon_name") as string || "Trophy";
+    const open_time = formData.get("open_time") as string || "08:00";
+    const close_time = formData.get("close_time") as string || "22:00";
 
-    console.log("Adding activity:", { name_ar, name_en, icon_name });
+    console.log("Adding activity:", { name_ar, name_en, icon_name, open_time, close_time });
 
     const { error } = await (supabase
       .from("activities") as any)
-      .insert([{ name_ar, name_en, icon_name }]);
+      .insert([{ name_ar, name_en, icon_name, open_time, close_time }]);
 
     if (error) {
       console.error("Supabase error adding activity:", error);

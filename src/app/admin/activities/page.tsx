@@ -63,6 +63,8 @@ export default function ActivitiesPage() {
     const min_players = parseInt(formData.get("min_players") as string) || 1;
     const max_players = parseInt(formData.get("max_players") as string) || 10;
     const durationsStr = formData.get("durations_options") as string;
+    const open_time = (formData.get("open_time") as string) || "08:00";
+    const close_time = (formData.get("close_time") as string) || "22:00";
     
     // Parse comma-separated durations into JSON array
     const durations_options = durationsStr 
@@ -78,7 +80,9 @@ export default function ActivitiesPage() {
         base_price,
         min_players,
         max_players,
-        durations_options
+        durations_options,
+        open_time,
+        close_time
       };
 
       let error;
@@ -189,6 +193,17 @@ export default function ActivitiesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'من الساعة (وقت الفتح)' : 'From Hour (Open Time)'}</label>
+                <input name="open_time" type="time" required defaultValue={editingActivity?.open_time || '08:00'} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'إلى الساعة (وقت الإغلاق)' : 'To Hour (Close Time)'}</label>
+                <input name="close_time" type="time" required defaultValue={editingActivity?.close_time || '22:00'} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">{t.allowedDurations}</label>
                 <input name="durations_options" placeholder="60, 90, 120" defaultValue={editingActivity?.durations_options?.join(', ') || '60'} className={`w-full bg-surface/50 border border-border rounded-xl py-2 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`} />
                 <p className="text-xs text-muted mt-1">{t.commaSeparated}</p>
@@ -275,6 +290,10 @@ export default function ActivitiesPage() {
                 <div className="flex justify-between items-center">
                   <span className="opacity-80">{t.players}:</span>
                   <span className="font-medium text-foreground">{activity.min_players || 1} - {activity.max_players || 10}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-80">{language === 'ar' ? 'مواعيد العمل:' : 'Operating Hours:'}</span>
+                  <span className="font-medium text-foreground">{(activity.open_time || '08:00')} - {(activity.close_time || '22:00')}</span>
                 </div>
               </div>
             </div>

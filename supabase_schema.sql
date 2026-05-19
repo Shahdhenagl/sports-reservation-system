@@ -51,6 +51,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bookings' AND column_name='rejection_reason') THEN
         ALTER TABLE bookings ADD COLUMN rejection_reason TEXT;
     END IF;
+    
+    -- Activities operating hours columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='activities' AND column_name='open_time') THEN
+        ALTER TABLE activities ADD COLUMN open_time TEXT DEFAULT '08:00';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='activities' AND column_name='close_time') THEN
+        ALTER TABLE activities ADD COLUMN close_time TEXT DEFAULT '22:00';
+    END IF;
 END $$;
 
 -- Drop and recreate status check constraint to ensure partially_paid is allowed on existing databases

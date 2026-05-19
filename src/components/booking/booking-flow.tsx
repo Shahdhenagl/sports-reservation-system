@@ -202,10 +202,22 @@ export function BookingFlow() {
   }, []);
 
   useEffect(() => {
-    if (selectedDate && selectedDuration) {
+    if (selectedDate && selectedDuration && selectedActivity) {
       const slots = [];
-      const startMinutes = 8 * 60; // 08:00
-      const endMinutes = 22 * 60;  // 22:00
+      const openTime = selectedActivity.open_time || "08:00";
+      const closeTime = selectedActivity.close_time || "22:00";
+
+      const [openH, openM] = openTime.split(':').map(Number);
+      const [closeH, closeM] = closeTime.split(':').map(Number);
+
+      const startMinutes = openH * 60 + openM;
+      let endMinutes = closeH * 60 + closeM;
+
+      // Handle overnight hours (e.g. 13:00 to 05:00 next morning)
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60;
+      }
+
       let currentMinutes = startMinutes;
 
       const now = new Date();
@@ -215,8 +227,9 @@ export function BookingFlow() {
 
       while (currentMinutes <= endMinutes) {
         if (!isToday || currentMinutes > currentHourMinutes) {
-          const h = Math.floor(currentMinutes / 60);
-          const m = currentMinutes % 60;
+          const adjustedMinutes = currentMinutes % (24 * 60);
+          const h = Math.floor(adjustedMinutes / 60);
+          const m = adjustedMinutes % 60;
           slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
         }
         currentMinutes += selectedDuration;
@@ -226,7 +239,7 @@ export function BookingFlow() {
     } else {
       setAvailableTimeSlots([]);
     }
-  }, [selectedDate, selectedDuration]);
+  }, [selectedDate, selectedDuration, selectedActivity]);
 
   // Get today's date string for input min attribute
   const now = new Date();
