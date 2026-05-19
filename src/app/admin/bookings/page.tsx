@@ -465,47 +465,53 @@ export default function BookingsPage() {
         </div>
 
         {/* Premium Segmented Date Filter Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-surface border border-border/60 p-4 rounded-2xl shadow-sm justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 print:hidden">
+          {/* Period Selection Pill Control */}
+          <div className="flex bg-slate-100 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-1 items-center gap-1 shadow-inner">
+            <button
+              onClick={() => setPeriodType("daily")}
+              className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+                periodType === "daily" 
+                  ? "bg-white dark:bg-slate-900 text-red-600 shadow-md scale-[1.02]" 
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {language === 'ar' ? 'يومي' : 'Daily'}
+            </button>
+            <button
+              onClick={() => setPeriodType("monthly")}
+              className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+                periodType === "monthly" 
+                  ? "bg-white dark:bg-slate-900 text-red-600 shadow-md scale-[1.02]" 
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {language === 'ar' ? 'شهري' : 'Monthly'}
+            </button>
+            <button
+              onClick={() => setPeriodType("yearly")}
+              className={`px-5 py-2 text-sm font-bold rounded-xl transition-all ${
+                periodType === "yearly" 
+                  ? "bg-white dark:bg-slate-900 text-red-600 shadow-md scale-[1.02]" 
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              }`}
+            >
+              {language === 'ar' ? 'سنوي' : 'Yearly'}
+            </button>
+          </div>
+
           {/* Custom Date Input Display */}
-          <div className="relative flex items-center bg-background border border-border shadow-inner rounded-xl px-4 py-2.5 hover:bg-surface-hover transition-all cursor-pointer group">
-            <span className="font-bold text-foreground text-sm font-mono tracking-wide">
+          <div dir="ltr" className="relative flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 shadow-sm rounded-2xl px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer group gap-2">
+            <Calendar className="w-5 h-5 text-red-600" />
+            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm font-mono tracking-wide">
               {selectedDate.split("-").reverse().join("/")}
             </span>
-            <Calendar className="w-5 h-5 text-red-600 ml-3" />
             <input 
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
             />
-          </div>
-
-          {/* Period Selection Pill Control */}
-          <div className="flex bg-surface-hover border border-border/80 rounded-xl p-1 items-center gap-1">
-            <button
-              onClick={() => setPeriodType("yearly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                periodType === "yearly" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
-              }`}
-            >
-              {language === 'ar' ? 'سنوي' : 'Yearly'}
-            </button>
-            <button
-              onClick={() => setPeriodType("monthly")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                periodType === "monthly" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
-              }`}
-            >
-              {language === 'ar' ? 'شهري' : 'Monthly'}
-            </button>
-            <button
-              onClick={() => setPeriodType("daily")}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                periodType === "daily" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
-              }`}
-            >
-              {language === 'ar' ? 'يومي' : 'Daily'}
-            </button>
           </div>
         </div>
 
