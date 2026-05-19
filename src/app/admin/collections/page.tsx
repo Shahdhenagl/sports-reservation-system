@@ -133,7 +133,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
 
   // Filtered transactions
   const filteredTransactions = transactions.filter(tx => {
-    const customerName = tx.bookings?.customers?.name || "";
+    const customerName = tx.bookings?.customers?.full_name || "";
     const matchesSearch = 
       tx.booking_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customerName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -359,7 +359,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
                     {filteredTransactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-surface/35 transition-colors">
                         <td className="px-6 py-4 font-mono font-bold text-primary">{tx.booking_ref}</td>
-                        <td className="px-6 py-4 font-bold text-foreground">{tx.bookings?.customers?.name || "-"}</td>
+                        <td className="px-6 py-4 font-bold text-foreground">{tx.bookings?.customers?.full_name || "-"}</td>
                         <td className="px-6 py-4">
                           {tx.type === "collection" ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 border border-green-500/20">
