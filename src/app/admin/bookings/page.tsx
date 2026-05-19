@@ -25,6 +25,11 @@ export default function BookingsPage() {
   const [refundAmount, setRefundAmount] = useState("");
   const [refundMethod, setRefundMethod] = useState("instapay");
 
+  // Rejection & Refund Modal State
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectRefundAmount, setRejectRefundAmount] = useState("");
+  const [rejectRefundMethod, setRejectRefundMethod] = useState("instapay");
+
   const supabase = createClient();
 
   const fetchBookings = async (background = false) => {
@@ -248,34 +253,95 @@ export default function BookingsPage() {
     }
   };
 
-  const handleReject = async (booking: any) => {
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
     if (!rejectionReason.trim()) {
       alert(language === 'ar' ? 'يرجى كتابة سبب الرفض' : 'Please enter a rejection reason');
       return;
     }
 
-    const { error: rejectError } = await (supabase.from("bookings") as any)
-      .update({ status: "rejected", rejection_reason: rejectionReason, updated_at: new Date().toISOString() })
-      .eq("id", booking.id);
-
-    if (rejectError) {
-      alert(language === 'ar' ? `حدث خطأ أثناء رفض الحجز: ${rejectError.message}` : `Error rejecting booking: ${rejectError.message}`);
+    const refundAmt = parseFloat(rejectRefundAmount) || 0;
+    if (refundAmt < 0) {
+      alert(language === 'ar' ? 'يرجى إدخال مبلغ صحيح' : 'Please enter a valid amount');
       return;
     }
 
-    // Open WhatsApp with rejection message
-    const customer = booking.customers;
-    if (customer) {
-      const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
-      const message = language === 'ar' 
-        ? `❌ *تم رفض حجزك*\n\n📋 رقم الحجز: ${booking.booking_ref}\n⚽ النشاط: ${booking.activity_name}\n📅 التاريخ: ${booking.booking_date}\n⏰ الوقت: ${booking.booking_time}\n💰 إجمالي المبلغ: EGP ${booking.total_price || 0}\n💳 المبلغ المدفوع (المسترد): EGP ${booking.amount_paid || 0}\n📝 السبب: ${rejectionReason}\n\nيمكنك المحاولة مرة أخرى أو التواصل معنا.`
-        : `❌ *Booking Rejected*\n\n📋 Ref: ${booking.booking_ref}\n⚽ Activity: ${booking.activity_name}\n📅 Date: ${booking.booking_date}\n⏰ Time: ${booking.booking_time}\n💰 Total Amount: EGP ${booking.total_price || 0}\n💳 Amount Paid (Refunded): EGP ${booking.amount_paid || 0}\n📝 Reason: ${rejectionReason}\n\nPlease try again or contact us.`;
-      window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+    const currentPaid = selectedBooking.amount_paid || 0;
+    if (refundAmt > currentPaid) {
+      alert(language === 'ar' ? `الحد الأقصى للرد هو المبلغ المدفوع: EGP ${currentPaid}` : `Max refund allowed is the amount paid: EGP ${currentPaid}`);
+      return;
     }
 
-    setRejectionReason("");
-    setSelectedBooking(null);
-    fetchBookings();
+    const newPaid = Math.max(0, currentPaid - refundAmt);
+
+    try {
+      // 1. Update Booking
+      const { error: rejectError } = await (supabase.from("bookings") as any)
+        .update({ 
+          status: "rejected", 
+          rejection_reason: rejectionReason, 
+          amount_paid: newPaid,
+          updated_at: new Date().toISOString() 
+        })
+        .eq("id", selectedBooking.id);
+
+      if (rejectError) throw rejectError;
+
+      // 2. Log Transaction (only if refundAmt > 0)
+      if (refundAmt > 0) {
+        const { error: txErr } = await (supabase.from("transactions") as any)
+          .insert([{
+            booking_id: selectedBooking.id,
+            booking_ref: selectedBooking.booking_ref,
+            type: 'refund',
+            amount: refundAmt,
+            method: rejectRefundMethod
+          }]);
+
+        if (txErr) {
+          console.error("Error creating transaction record:", txErr);
+        }
+
+        // 3. Update Customer's total_payments
+        if (selectedBooking.customer_id) {
+          const { data: customerData } = await (supabase.from("customers") as any)
+            .select("total_payments")
+            .eq("id", selectedBooking.customer_id)
+            .single();
+          
+          const currentTotal = parseFloat(customerData?.total_payments || 0);
+          await (supabase.from("customers") as any)
+            .update({
+              total_payments: Math.max(0, currentTotal - refundAmt),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", selectedBooking.customer_id);
+        }
+      }
+
+      // Open WhatsApp with rejection message
+      const customer = selectedBooking.customers;
+      if (customer) {
+        const whatsappNum = `${customer.whatsapp_code || '+20'}${customer.whatsapp}`.replace('+', '');
+        const refundMsgAr = refundAmt > 0 ? `\n💸 تم رد مبلغ: EGP ${refundAmt} (${rejectRefundMethod === 'instapay' ? 'InstaPay' : (rejectRefundMethod === 'wallet' ? 'محفظة' : 'كاش')})` : '\n💸 لم يتم دفع عربون / تم إرجاع 0 EGP';
+        const refundMsgEn = refundAmt > 0 ? `\n💸 Refunded: EGP ${refundAmt} (${rejectRefundMethod})` : '\n💸 Refunded: EGP 0';
+        
+        const message = language === 'ar' 
+          ? `❌ *تم رفض حجزك*\n\n📋 رقم الحجز: ${selectedBooking.booking_ref}\n⚽ النشاط: ${selectedBooking.activity_name}\n📅 التاريخ: ${selectedBooking.booking_date}\n⏰ الوقت: ${selectedBooking.booking_time}\n💰 إجمالي المبلغ: EGP ${selectedBooking.total_price || 0}${refundMsgAr}\n📝 السبب: ${rejectionReason}\n\nيمكنك المحاولة مرة أخرى أو التواصل معنا.`
+          : `❌ *Booking Rejected*\n\n📋 Ref: ${selectedBooking.booking_ref}\n⚽ Activity: ${selectedBooking.activity_name}\n📅 Date: ${selectedBooking.booking_date}\n⏰ Time: ${selectedBooking.booking_time}\n💰 Total Amount: EGP ${selectedBooking.total_price || 0}${refundMsgEn}\n📝 Reason: ${rejectionReason}\n\nPlease try again or contact us.`;
+        window.open(`https://wa.me/${whatsappNum}?text=${encodeURIComponent(message)}`, '_blank');
+      }
+
+      alert(language === 'ar' ? "تم رفض الحجز وتسجيل العملية بنجاح" : "Booking rejected and processed successfully");
+      setRejectModalOpen(false);
+      setRejectionReason("");
+      setSelectedBooking(null);
+      fetchBookings();
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error: ${err.message}`);
+    }
   };
 
   // Removed legacy direct collection helpers in favor of the new unified Collection/Refund Sub-Modal workflow
@@ -535,19 +601,18 @@ export default function BookingsPage() {
                     </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <textarea
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder={language === 'ar' ? 'سبب الرفض...' : 'Rejection reason...'}
-                      className="w-full bg-surface/50 border border-border rounded-xl py-3 px-4 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[80px] text-sm"
-                    />
+                  <div className="pt-2 border-t border-border">
                     <button
-                      onClick={() => handleReject(selectedBooking)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+                      onClick={() => {
+                        setRejectRefundAmount((selectedBooking.amount_paid || 0).toString());
+                        setRejectRefundMethod("instapay");
+                        setRejectionReason("");
+                        setRejectModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
                     >
                       <XCircle className="w-5 h-5" />
-                      {language === 'ar' ? 'رفض الحجز' : 'Reject'}
+                      {language === 'ar' ? 'رفض الحجز وإجراء رد المبلغ' : 'Reject & Process Refund'}
                     </button>
                   </div>
                 </div>
@@ -732,6 +797,87 @@ export default function BookingsPage() {
                   className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
                 >
                   {language === 'ar' ? 'تأكيد الرد' : 'Confirm Refund'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Rejection Sub-Modal */}
+      {rejectModalOpen && selectedBooking && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full p-6 space-y-4" dir={direction}>
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h4 className="text-lg font-bold text-foreground">
+                {language === 'ar' ? 'رفض الحجز وإرجاع المبلغ' : 'Reject Booking & Process Refund'}
+              </h4>
+              <button onClick={() => setRejectModalOpen(false)} className="p-1.5 text-muted hover:text-foreground hover:bg-surface-hover rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted">{language === 'ar' ? 'رقم الحجز' : 'Booking Ref'}</p>
+                <p className="text-sm font-bold text-foreground font-mono">{selectedBooking.booking_ref}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'سبب الرفض' : 'Rejection Reason'}</label>
+                <textarea
+                  required
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder={language === 'ar' ? 'اكتب سبب الرفض هنا ليتم إرساله للعميل...' : 'Write rejection reason...'}
+                  className={`w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none min-h-[80px] text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'المبلغ المسترد (يمكن أن يكون 0)' : 'Refund Amount (Can be 0)'}</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  required 
+                  min="0"
+                  max={selectedBooking.amount_paid}
+                  value={rejectRefundAmount}
+                  onChange={(e) => setRejectRefundAmount(e.target.value)}
+                  className={`w-full bg-surface/50 border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                />
+                <p className="text-[10px] text-muted">
+                  {language === 'ar' ? `المبلغ الذي أرسله العميل: EGP ${selectedBooking.amount_paid || 0}` : `Amount sent by customer: EGP ${selectedBooking.amount_paid || 0}`}
+                </p>
+              </div>
+
+              {parseFloat(rejectRefundAmount) > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">{language === 'ar' ? 'طريقة الرد' : 'Refund Method'}</label>
+                  <select 
+                    value={rejectRefundMethod}
+                    onChange={(e) => setRejectRefundMethod(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-xl py-2.5 px-4 text-foreground focus:ring-2 focus:ring-primary outline-none"
+                  >
+                    <option value="instapay">InstaPay</option>
+                    <option value="wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
+                    <option value="cash">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-3 border-t border-border">
+                <button 
+                  type="button" 
+                  onClick={() => setRejectModalOpen(false)} 
+                  className="flex-1 py-2.5 rounded-xl border border-border text-muted hover:bg-surface-hover transition-colors"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+                >
+                  {language === 'ar' ? 'تأكيد الرفض والرد' : 'Confirm Rejection'}
                 </button>
               </div>
             </form>
