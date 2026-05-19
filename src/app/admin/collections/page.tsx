@@ -38,7 +38,7 @@ export default function CollectionsPage() {
     if (!background) setLoading(true);
     try {
       const { data, error } = await (supabase.from("transactions") as any)
-        .select("*")
+        .select("*, bookings(*, customers(*))")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -133,7 +133,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
 
   // Filtered transactions
   const filteredTransactions = transactions.filter(tx => {
-    const matchesSearch = tx.booking_ref.toLowerCase().includes(searchTerm.toLowerCase());
+    const customerName = tx.bookings?.customers?.name || "";
+    const matchesSearch = 
+      tx.booking_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || tx.type === typeFilter;
     const matchesMethod = methodFilter === "all" || tx.method === methodFilter;
     return matchesSearch && matchesType && matchesMethod;
@@ -345,6 +348,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
                   <thead>
                     <tr className="border-b border-border bg-surface/50 text-xs font-semibold text-muted">
                       <th className="px-6 py-4">{language === 'ar' ? 'رقم الحجز' : 'Booking Ref'}</th>
+                      <th className="px-6 py-4">{language === 'ar' ? 'اسم العميل' : 'Customer Name'}</th>
                       <th className="px-6 py-4">{language === 'ar' ? 'نوع العملية' : 'Type'}</th>
                       <th className="px-6 py-4">{language === 'ar' ? 'المبلغ' : 'Amount'}</th>
                       <th className="px-6 py-4">{language === 'ar' ? 'طريقة المعاملة' : 'Method'}</th>
@@ -355,6 +359,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
                     {filteredTransactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-surface/35 transition-colors">
                         <td className="px-6 py-4 font-mono font-bold text-primary">{tx.booking_ref}</td>
+                        <td className="px-6 py-4 font-bold text-foreground">{tx.bookings?.customers?.name || "-"}</td>
                         <td className="px-6 py-4">
                           {tx.type === "collection" ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 border border-green-500/20">
