@@ -75,8 +75,9 @@ export default function BookingsPage() {
       return;
     }
 
+    const isPending = selectedBooking.status === 'pending';
     const currentPaid = selectedBooking.amount_paid || 0;
-    const newPaid = currentPaid + amount;
+    const newPaid = isPending ? amount : (currentPaid + amount);
     
     let nextStatus = selectedBooking.status;
     if (newPaid >= (selectedBooking.total_price || 0)) {
@@ -523,7 +524,7 @@ export default function BookingsPage() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        setCollectAmount(((selectedBooking.total_price || 0) - (selectedBooking.amount_paid || 0)).toString());
+                        setCollectAmount((selectedBooking.amount_paid || 0).toString());
                         setCollectMethod(selectedBooking.payment_method || "instapay");
                         setCollectionModalOpen(true);
                       }}
