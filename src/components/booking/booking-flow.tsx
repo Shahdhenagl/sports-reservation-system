@@ -33,6 +33,8 @@ export function BookingFlow() {
 
   // Dynamic data
   const [activities, setActivities] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -151,6 +153,7 @@ export function BookingFlow() {
       const { error: insertError } = await (supabase.from('bookings') as any).insert([{
         booking_ref: ref,
         customer_id: customerId,
+        branch_id: selectedBranch?.id === 'default-branch-id' ? null : selectedBranch?.id,
         activity_id: selectedActivity?.id,
         activity_name: activityName,
         booking_date: selectedDate,
@@ -182,6 +185,20 @@ export function BookingFlow() {
 
   useEffect(() => {
     async function fetchData() {
+      // Fetch Branches
+      const { data: branchesData } = await supabase.from("branches").select("*");
+      let activeBranches: any[] = branchesData || [];
+      if (activeBranches.length === 0) {
+        const defaultBranch = {
+          id: "default-branch-id",
+          name: language === 'ar' ? 'الفرع الرئيسي' : 'Main Branch',
+          address: language === 'ar' ? '123 شارع الرياضة، القاهرة' : '123 Sports Street, Cairo',
+        };
+        activeBranches = [defaultBranch];
+      }
+      setBranches(activeBranches);
+      setSelectedBranch(activeBranches[0]);
+
       const { data } = await (supabase
         .from("activities") as any)
         .select("*")
@@ -315,68 +332,151 @@ export function BookingFlow() {
       <div className="relative z-10 min-h-[450px]">
         {step === 1 && (
           <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-foreground mb-3 tracking-tighter">
-                {language === 'ar' ? 'ماذا تريد أن تلعب؟' : 'Ready to Play?'}
-              </h2>
-              <p className="text-muted text-lg max-w-lg mx-auto">{t.selectSport}</p>
-            </div>
-            
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <p className="text-muted animate-pulse">{language === 'ar' ? 'جاري التحميل...' : 'Loading activities...'}</p>
+            {/* 1. Branch Selector (Choose Branch First) */}
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary mb-2">
+                  {language === 'ar' ? 'الخطوة 1: اختر الفرع' : 'Step 1: Choose Branch'}
+                </span>
+                <h2 className="text-3xl font-black text-foreground tracking-tight">
+                  {language === 'ar' ? 'اختر الفرع أولاً' : 'Select Branch First'}
+                </h2>
+                <p className="text-muted text-sm max-w-md mx-auto">
+                  {language === 'ar' ? 'يرجى اختيار الفرع المطلوب لعرض الأنشطة والملاعب المتاحة به' : 'Please select a branch to view available activities and playgrounds'}
+                </p>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                {activities.map((activity) => (
-                  <button 
-                    key={activity.id}
-                    onClick={() => {
-                      setSelectedActivity(activity);
-                      setSelectedDuration(activity.durations_options?.[0] || 60);
-                      setPlayersCount(activity.min_players || 1);
-                    }}
-                    className={`group relative p-8 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center gap-6 overflow-hidden ${
-                      selectedActivity?.id === activity.id 
-                      ? 'border-primary bg-primary/10 shadow-2xl shadow-primary/20 scale-[1.02]' 
-                      : 'border-border/40 bg-surface/30 hover:border-primary/40 hover:bg-surface/50 hover:scale-[1.01]'
-                    }`}
-                  >
-                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center transition-all duration-500 ${
-                      selectedActivity?.id === activity.id ? 'bg-primary text-white rotate-[10deg]' : 'bg-primary/10 text-primary group-hover:rotate-12'
-                    }`}>
-                      {(() => {
-                        const iconObj = AVAILABLE_ICONS.find(i => i.name === (activity.icon_name || "Trophy"));
-                        const IconComp = iconObj ? iconObj.icon : Trophy;
-                        return <IconComp className="w-10 h-10" />;
-                      })()}
-                    </div>
-                    
-                    <div className="text-center z-10">
-                      <span className="block font-black text-2xl text-foreground mb-2 tracking-tight">
-                        {language === 'ar' ? activity.name_ar : activity.name_en}
-                      </span>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-center gap-2 text-primary font-bold">
-                          <span>EGP {activity.base_price}</span>
-                          <span className="w-1 h-1 rounded-full bg-primary/40" />
-                          <span className="text-xs uppercase opacity-80">
-                            {activity.pricing_type === 'per_person' ? (language === 'ar' ? 'للفرد' : 'Per Person') : (language === 'ar' ? 'للمباراة' : 'Per Match')}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted font-medium opacity-60">
-                          {activity.durations_options?.[0]} {language === 'ar' ? 'دقيقة / حجز' : 'mins / slot'}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Subtle pattern or glow for active state */}
-                    {selectedActivity?.id === activity.id && (
-                      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-                    )}
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                {branches.map((branch) => {
+                  const isSelected = selectedBranch?.id === branch.id;
+                  return (
+                    <button
+                      key={branch.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedBranch(branch);
+                        // Reset selected activity when branch changes to ensure it's valid
+                        setSelectedActivity(null);
+                      }}
+                      className={`group relative p-5 rounded-2xl border-2 transition-all duration-300 flex items-center gap-4 text-right cursor-pointer ${
+                        isSelected 
+                          ? 'border-primary bg-primary/10 shadow-lg scale-[1.02]' 
+                          : 'border-border/40 bg-surface/30 hover:border-primary/40 hover:bg-surface/50'
+                      }`}
+                      dir={direction}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                        isSelected ? 'bg-primary text-white scale-110 shadow-md' : 'bg-primary/10 text-primary'
+                      }`}>
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="block font-black text-lg text-foreground">
+                          {branch.name}
+                        </span>
+                        <span className="block text-xs text-muted truncate">
+                          {branch.address}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <div className="absolute top-3 left-3 bg-primary text-white rounded-full p-0.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Activity Selector (Choose Sport/Activity) */}
+            {selectedBranch && (
+              <div className="space-y-6 pt-4 border-t border-border/30">
+                <div className="text-center">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary mb-2">
+                    {language === 'ar' ? 'الخطوة 2: اختر النشاط' : 'Step 2: Choose Activity'}
+                  </span>
+                  <h2 className="text-3xl font-black text-foreground tracking-tight">
+                    {language === 'ar' ? 'ماذا تريد أن تلعب؟' : 'Ready to Play?'}
+                  </h2>
+                  <p className="text-muted text-sm max-w-md mx-auto">
+                    {language === 'ar' ? 'اختر النشاط أو الرياضة المفضلة لديك' : 'Select your preferred sport or activity'}
+                  </p>
+                </div>
+
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3">
+                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                    <p className="text-muted text-sm animate-pulse">{language === 'ar' ? 'جاري تحميل الأنشطة...' : 'Loading activities...'}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    {(() => {
+                      const filtered = activities.filter(activity => {
+                        if (!selectedBranch || selectedBranch.id === 'default-branch-id') return true;
+                        if (!activity.branch_ids || activity.branch_ids.length === 0) return true;
+                        return activity.branch_ids.includes(selectedBranch.id);
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="col-span-full text-center py-10 text-muted font-bold">
+                            {language === 'ar' ? 'لا توجد أنشطة متاحة في هذا الفرع حالياً' : 'No activities available at this branch right now'}
+                          </div>
+                        );
+                      }
+
+                      return filtered.map((activity) => (
+                        <button 
+                          key={activity.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedActivity(activity);
+                            setSelectedDuration(activity.durations_options?.[0] || 60);
+                            setPlayersCount(activity.min_players || 1);
+                          }}
+                          className={`group relative p-6 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center gap-4 overflow-hidden ${
+                            selectedActivity?.id === activity.id 
+                            ? 'border-primary bg-primary/10 shadow-2xl shadow-primary/20 scale-[1.02]' 
+                            : 'border-border/40 bg-surface/30 hover:border-primary/40 hover:bg-surface/50 hover:scale-[1.01]'
+                          }`}
+                        >
+                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                            selectedActivity?.id === activity.id ? 'bg-primary text-white rotate-[10deg]' : 'bg-primary/10 text-primary group-hover:rotate-12'
+                          }`}>
+                            {(() => {
+                              const iconObj = AVAILABLE_ICONS.find(i => i.name === (activity.icon_name || "Trophy"));
+                              const IconComp = iconObj ? iconObj.icon : Trophy;
+                              return <IconComp className="w-8 h-8" />;
+                            })()}
+                          </div>
+                          
+                          <div className="text-center z-10">
+                            <span className="block font-black text-xl text-foreground mb-1 tracking-tight">
+                              {language === 'ar' ? activity.name_ar : activity.name_en}
+                            </span>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm">
+                                <span>EGP {activity.base_price}</span>
+                                <span className="w-1 h-1 rounded-full bg-primary/40" />
+                                <span className="text-[10px] uppercase opacity-85">
+                                  {activity.pricing_type === 'per_person' ? (language === 'ar' ? 'للفرد' : 'Per Person') : (language === 'ar' ? 'للمباراة' : 'Per Match')}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted font-medium opacity-65">
+                                {activity.durations_options?.[0]} {language === 'ar' ? 'دقيقة / حجز' : 'mins / slot'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {selectedActivity?.id === activity.id && (
+                            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
+                          )}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
               </div>
             )}
           </div>

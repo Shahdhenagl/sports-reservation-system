@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign, Search, Filter, Printer, Calendar } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign, Search, Filter, Printer, Calendar, Plus, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function BookingsPage() {
@@ -35,7 +35,60 @@ export default function BookingsPage() {
   const [periodType, setPeriodType] = useState<"daily" | "monthly" | "yearly">("daily");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
 
+  // Form options and values
+  const [branches, setBranches] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [addBookingOpen, setAddBookingOpen] = useState(false);
+
+  const [formBranchId, setFormBranchId] = useState("");
+  const [formActivityId, setFormActivityId] = useState("");
+  const [formCustomerId, setFormCustomerId] = useState("");
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerWhatsapp, setNewCustomerWhatsapp] = useState("");
+  const [formDate, setFormDate] = useState("");
+  const [formTime, setFormTime] = useState("");
+  const [formDuration, setFormDuration] = useState("60");
+  const [formTotalPrice, setFormTotalPrice] = useState("");
+  const [formAmountPaid, setFormAmountPaid] = useState("");
+  const [formPaymentMethod, setFormPaymentMethod] = useState("instapay");
+  const [formNotes, setFormNotes] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
   const supabase = createClient();
+
+  const fetchFormData = async () => {
+    try {
+      const { data: bData } = await supabase.from("branches").select("*");
+      if (bData && bData.length > 0) {
+        setBranches(bData);
+      } else {
+        setBranches([{
+          id: "default-branch-id",
+          name: language === 'ar' ? 'الفرع الرئيسي' : 'Main Branch',
+          address: language === 'ar' ? '123 شارع الرياضة، القاهرة' : '123 Sports Street, Cairo',
+        }]);
+      }
+
+      const { data: aData } = await (supabase.from("activities") as any).select("*").eq("is_active", true).order("name_ar", { ascending: true });
+      if (aData) setActivities(aData);
+
+      const { data: cData } = await (supabase.from("customers") as any).select("*").order("full_name", { ascending: true });
+      if (cData) setCustomers(cData);
+    } catch (err) {
+      console.error("Error fetching form options:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (formActivityId) {
+      const act = activities.find(a => a.id === formActivityId);
+      if (act) {
+        setFormTotalPrice(act.base_price ? act.base_price.toString() : "");
+      }
+    }
+  }, [formActivityId, activities]);
 
   const fetchBookings = async (background = false) => {
     if (!background) setLoading(true);
@@ -55,6 +108,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookings();
+    fetchFormData();
   }, [statusFilter]);
 
   useEffect(() => {
@@ -74,6 +128,130 @@ export default function BookingsPage() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const handleAddBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formBranchId) {
+      alert(language === 'ar' ? "يرجى اختيار الفرع أولاً" : "Please select a branch first");
+      return;
+    }
+    if (!formActivityId) {
+      alert(language === 'ar' ? "يرجى اختيار النشاط" : "Please select an activity");
+      return;
+    }
+    if (!formCustomerId && (!newCustomerName || !newCustomerPhone)) {
+      alert(language === 'ar' ? "يرجى إدخال اسم العميل ورقم الهاتف" : "Please enter customer name and phone");
+      return;
+    }
+    if (!formDate || !formTime) {
+      alert(language === 'ar' ? "يرجى اختيار التاريخ والوقت" : "Please select date and time");
+      return;
+    }
+
+    setFormSubmitting(true);
+    try {
+      // 1. Get or create Customer ID
+      let finalCustomerId = formCustomerId;
+      if (!finalCustomerId) {
+        const { data: newCust, error: custErr } = await (supabase.from("customers") as any).insert([{
+          full_name: newCustomerName,
+          phone: newCustomerPhone,
+          phone_code: "+20",
+          whatsapp: newCustomerWhatsapp || newCustomerPhone,
+          whatsapp_code: "+20",
+          total_payments: parseFloat(formAmountPaid) || 0
+        }]).select().single();
+        if (custErr) throw custErr;
+        finalCustomerId = newCust.id;
+      }
+
+      // 2. Generate random Booking Ref
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let ref = 'BK-';
+      for (let i = 0; i < 5; i++) {
+        ref += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      // 3. Status determination
+      const total = parseFloat(formTotalPrice) || 0;
+      const paid = parseFloat(formAmountPaid) || 0;
+      let nextStatus = 'pending';
+      if (paid >= total && total > 0) {
+        nextStatus = 'approved';
+      } else if (paid > 0) {
+        nextStatus = 'partially_paid';
+      }
+
+      const activity = activities.find(a => a.id === formActivityId);
+      const actName = activity ? (language === 'ar' ? activity.name_ar : activity.name_en) : "";
+
+      // 4. Insert Booking
+      const { data: newBooking, error: bookErr } = await (supabase.from("bookings") as any).insert([{
+        booking_ref: ref,
+        customer_id: finalCustomerId,
+        branch_id: formBranchId === 'default-branch-id' ? null : formBranchId,
+        activity_id: formActivityId,
+        activity_name: actName,
+        booking_date: formDate,
+        booking_time: formTime,
+        duration: parseInt(formDuration) || 60,
+        players_count: 2,
+        total_price: total,
+        amount_paid: paid,
+        payment_type: paid >= total ? 'full' : 'partial',
+        payment_method: formPaymentMethod,
+        status: nextStatus,
+        special_requests: formNotes || null
+      }]).select().single();
+      if (bookErr) throw bookErr;
+
+      // 5. Insert Transaction if paid > 0
+      if (paid > 0 && newBooking) {
+        await (supabase.from("transactions") as any).insert([{
+          booking_id: newBooking.id,
+          booking_ref: ref,
+          type: 'collection',
+          amount: paid,
+          method: formPaymentMethod
+        }]);
+
+        // Update customer payments if existing
+        if (formCustomerId) {
+          const { data: custData } = await (supabase.from("customers") as any).select("total_payments").eq("id", finalCustomerId).single();
+          const currentTotal = parseFloat(custData?.total_payments || 0);
+          await (supabase.from("customers") as any).update({
+            total_payments: currentTotal + paid,
+            updated_at: new Date().toISOString()
+          }).eq("id", finalCustomerId);
+        }
+      }
+
+      // 6. Reset form
+      setAddBookingOpen(false);
+      setFormBranchId("");
+      setFormActivityId("");
+      setFormCustomerId("");
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewCustomerWhatsapp("");
+      setFormDate("");
+      setFormTime("");
+      setFormDuration("60");
+      setFormTotalPrice("");
+      setFormAmountPaid("");
+      setFormNotes("");
+
+      // Refresh list
+      fetchBookings();
+      fetchFormData();
+      alert(language === 'ar' ? "تم إضافة الحجز بنجاح!" : "Booking added successfully!");
+    } catch (err: any) {
+      console.error("Error adding booking:", err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
 
   const handleCollectionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -453,6 +631,14 @@ export default function BookingsPage() {
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setAddBookingOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20 text-sm animate-pulse hover:animate-none"
+            >
+              <Plus className="w-4 h-4" />
+              {language === 'ar' ? 'إضافة حجز' : 'Add Booking'}
+            </button>
 
             <button
               onClick={() => window.print()}
@@ -999,6 +1185,255 @@ export default function BookingsPage() {
                   {language === 'ar' ? 'تأكيد الرفض والرد' : 'Confirm Rejection'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Booking Modal */}
+      {addBookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-950 rounded-[2rem] p-6 shadow-2xl border border-slate-200/50 dark:border-slate-800/80 animate-in zoom-in-95 duration-200 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/60 mb-4">
+              <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <Plus className="w-6 h-6 text-emerald-600" />
+                {language === 'ar' ? 'إضافة حجز جديد من لوحة التحكم' : 'Add New Admin Booking'}
+              </h2>
+              <button 
+                onClick={() => setAddBookingOpen(false)}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl transition-colors text-slate-400 hover:text-slate-650"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBookingSubmit} className="space-y-4 text-slate-700 dark:text-slate-200">
+              
+              {/* Step 1: Choose Branch First */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-800 dark:text-white block">
+                  {language === 'ar' ? '1. اختر الفرع أولاً:' : '1. Choose Branch First:'}
+                </label>
+                <select 
+                  required
+                  value={formBranchId}
+                  onChange={(e) => {
+                    setFormBranchId(e.target.value);
+                    setFormActivityId(""); // Reset activity when branch changes
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="">{language === 'ar' ? '-- اختر الفرع --' : '-- Select Branch --'}</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Step 2: Choose Activity (Filtered by Selected Branch) */}
+              {formBranchId && (
+                <div className="space-y-1.5 animate-in fade-in duration-300">
+                  <label className="text-sm font-bold text-slate-800 dark:text-white block">
+                    {language === 'ar' ? '2. اختر النشاط / الرياضة:' : '2. Choose Activity / Sport:'}
+                  </label>
+                  <select
+                    required
+                    value={formActivityId}
+                    onChange={(e) => setFormActivityId(e.target.value)}
+                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                  >
+                    <option value="">{language === 'ar' ? '-- اختر النشاط --' : '-- Select Activity --'}</option>
+                    {activities
+                      .filter(activity => {
+                        if (formBranchId === 'default-branch-id') return true;
+                        if (!activity.branch_ids || activity.branch_ids.length === 0) return true;
+                        return activity.branch_ids.includes(formBranchId);
+                      })
+                      .map(a => (
+                        <option key={a.id} value={a.id}>{language === 'ar' ? a.name_ar : a.name_en} ({a.base_price} EGP)</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
+
+              {/* Customer Selector / Form */}
+              {formActivityId && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 space-y-3">
+                    <label className="text-sm font-bold text-slate-800 dark:text-white block">
+                      {language === 'ar' ? '3. بيانات العميل:' : '3. Customer Details:'}
+                    </label>
+                    
+                    <select
+                      value={formCustomerId}
+                      onChange={(e) => setFormCustomerId(e.target.value)}
+                      className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                    >
+                      <option value="">{language === 'ar' ? '➕ عميل جديد (تسجيل عميل جديد)' : '➕ New Customer (Register New)'}</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.full_name} ({c.phone})</option>
+                      ))}
+                    </select>
+
+                    {/* New Customer Form Inputs */}
+                    {!formCustomerId && (
+                      <div className="grid gap-3 sm:grid-cols-2 pt-2 animate-in slide-in-from-top-2 duration-200">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'اسم العميل ثلاثي' : 'Customer Name'}</label>
+                          <input 
+                            required
+                            type="text" 
+                            value={newCustomerName}
+                            onChange={(e) => setNewCustomerName(e.target.value)}
+                            placeholder={language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohamed'}
+                            className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'رقم الموبايل' : 'Phone Number'}</label>
+                          <input 
+                            required
+                            type="tel" 
+                            value={newCustomerPhone}
+                            onChange={(e) => setNewCustomerPhone(e.target.value)}
+                            placeholder="01xxxxxxxxx"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'رقم الواتساب (اختياري)' : 'WhatsApp Number (Optional)'}</label>
+                          <input 
+                            type="tel" 
+                            value={newCustomerWhatsapp}
+                            onChange={(e) => setNewCustomerWhatsapp(e.target.value)}
+                            placeholder={language === 'ar' ? 'اتركه فارغاً ليطابق الموبايل' : 'Leave empty to match phone'}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Booking Date & Time Details */}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'تاريخ الحجز' : 'Date'}</label>
+                      <input 
+                        required
+                        type="date" 
+                        value={formDate}
+                        onChange={(e) => setFormDate(e.target.value)}
+                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'وقت الحجز (ساعة البدء)' : 'Start Time'}</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={formTime}
+                        onChange={(e) => setFormTime(e.target.value)}
+                        placeholder="18:00"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المدة (بالدقائق)' : 'Duration (mins)'}</label>
+                      <select
+                        value={formDuration}
+                        onChange={(e) => setFormDuration(e.target.value)}
+                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="60">60 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
+                        <option value="90">90 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
+                        <option value="120">120 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
+                        <option value="180">180 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Financial calculations */}
+                  <div className="grid gap-3 sm:grid-cols-3 p-4 bg-emerald-50/50 dark:bg-emerald-950/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المبلغ الإجمالي (EGP)' : 'Total Price'}</label>
+                      <input 
+                        required
+                        type="number" 
+                        value={formTotalPrice}
+                        onChange={(e) => setFormTotalPrice(e.target.value)}
+                        placeholder="200"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المبلغ المدفوع / العربون' : 'Amount Paid'}</label>
+                      <input 
+                        required
+                        type="number" 
+                        value={formAmountPaid}
+                        onChange={(e) => setFormAmountPaid(e.target.value)}
+                        placeholder="50"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</label>
+                      <select
+                        value={formPaymentMethod}
+                        onChange={(e) => setFormPaymentMethod(e.target.value)}
+                        className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="instapay">InstaPay</option>
+                        <option value="wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
+                        <option value="cash">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Special notes */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-350">{language === 'ar' ? 'ملاحظات إضافية' : 'Notes / Special Requests'}</label>
+                    <textarea
+                      value={formNotes}
+                      onChange={(e) => setFormNotes(e.target.value)}
+                      placeholder={language === 'ar' ? 'ملاحظات بخصوص الكرات، الإضاءة، إلخ...' : 'Any special notes...'}
+                      className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none min-h-[60px] text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  {/* Submit buttons */}
+                  <div className="flex gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <button 
+                      type="button" 
+                      onClick={() => setAddBookingOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl border border-slate-250 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-sm font-bold"
+                    >
+                      {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={formSubmitting}
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 text-sm flex items-center justify-center gap-2"
+                    >
+                      {formSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {language === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          {language === 'ar' ? 'إضافة الحجز وتأكيده' : 'Add Booking'}
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
             </form>
           </div>
         </div>

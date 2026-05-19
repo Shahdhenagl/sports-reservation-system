@@ -23,6 +23,8 @@ export default function ActivitiesPage() {
   const { language, direction } = useLanguage();
   const t = translations[language];
   const [activities, setActivities] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<any | null>(null);
@@ -35,8 +37,27 @@ export default function ActivitiesPage() {
     return <IconComponent className={className} />;
   };
 
+  const fetchBranches = async () => {
+    try {
+      const { data } = await supabase.from("branches").select("*");
+      if (data && data.length > 0) {
+        setBranches(data);
+      } else {
+        const defaultBranch = {
+          id: "default-branch-id",
+          name: language === 'ar' ? 'الفرع الرئيسي' : 'Main Branch',
+          address: language === 'ar' ? '123 شارع الرياضة، القاهرة' : '123 Sports Street, Cairo',
+        };
+        setBranches([defaultBranch]);
+      }
+    } catch (err) {
+      console.error("Error fetching branches:", err);
+    }
+  };
+
   const fetchActivities = async () => {
     setLoading(true);
+    await fetchBranches();
     const { data, error } = await (supabase
       .from("activities") as any)
       .select("*")
@@ -82,7 +103,8 @@ export default function ActivitiesPage() {
         max_players,
         durations_options,
         open_time,
-        close_time
+        close_time,
+        branch_ids: selectedBranchIds
       };
 
       let error;
@@ -144,7 +166,12 @@ export default function ActivitiesPage() {
           <p className="text-muted">{t.activitiesDesc}</p>
         </div>
         <button 
-          onClick={() => { setEditingActivity(null); setSelectedIcon("Trophy"); setIsFormOpen(true); }}
+          onClick={() => { 
+            setEditingActivity(null); 
+            setSelectedIcon("Trophy"); 
+            setSelectedBranchIds(branches.map(b => b.id));
+            setIsFormOpen(true); 
+          }}
           className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-hover"
         >
           <Plus className="h-5 w-5" />
@@ -230,6 +257,59 @@ export default function ActivitiesPage() {
               </div>
             </div>
 
+            {/* Branch Selector Checkbox Grid */}
+            <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-foreground">
+                  {language === 'ar' ? 'الفروع التي يتواجد بها هذا النشاط:' : 'Branches available for this activity:'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedBranchIds.length === branches.length) {
+                      setSelectedBranchIds([]);
+                    } else {
+                      setSelectedBranchIds(branches.map(b => b.id));
+                    }
+                  }}
+                  className="text-xs font-bold text-primary hover:text-primary-hover transition-colors"
+                >
+                  {selectedBranchIds.length === branches.length 
+                    ? (language === 'ar' ? 'إلغاء تحديد الكل' : 'Deselect All') 
+                    : (language === 'ar' ? 'تحديد الكل' : 'Select All')}
+                </button>
+              </div>
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 pt-1">
+                {branches.map((branch) => {
+                  const isChecked = selectedBranchIds.includes(branch.id);
+                  return (
+                    <label
+                      key={branch.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                        isChecked 
+                          ? 'bg-white dark:bg-slate-900 border-primary/40 shadow-sm text-primary' 
+                          : 'bg-white/40 dark:bg-slate-900/40 border-border text-muted hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          if (isChecked) {
+                            setSelectedBranchIds(selectedBranchIds.filter(id => id !== branch.id));
+                          } else {
+                            setSelectedBranchIds([...selectedBranchIds, branch.id]);
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary border-slate-300"
+                      />
+                      <span className="text-sm font-semibold">{branch.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-3 pt-4">
               <button type="button" onClick={() => { setIsFormOpen(false); setEditingActivity(null); }} className="px-4 py-2 rounded-xl text-muted hover:bg-surface transition-colors">{t.back}</button>
               <button type="submit" className="px-6 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover transition-colors">
@@ -258,7 +338,13 @@ export default function ActivitiesPage() {
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => { setEditingActivity(activity); setSelectedIcon(activity.icon_name || "Trophy"); setIsFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => { 
+                      setEditingActivity(activity); 
+                      setSelectedIcon(activity.icon_name || "Trophy"); 
+                      setSelectedBranchIds(activity.branch_ids || []);
+                      setIsFormOpen(true); 
+                      window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                    }}
                     className="p-2 text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 rounded-lg"
                   >
                     <Pencil className="h-5 w-5" />
@@ -274,6 +360,24 @@ export default function ActivitiesPage() {
               <h3 className="text-lg font-bold text-foreground mt-4">{language === 'ar' ? activity.name_ar : activity.name_en}</h3>
               <p className="text-sm text-muted">{activity.name_en} / {activity.name_ar}</p>
               
+              {/* Render branches badges */}
+              <div className="flex flex-wrap gap-1 mt-3">
+                {(activity.branch_ids || []).map((bId: string) => {
+                  const branch = branches.find(b => b.id === bId);
+                  if (!branch) return null;
+                  return (
+                    <span key={bId} className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                      {branch.name}
+                    </span>
+                  );
+                })}
+                {(!activity.branch_ids || activity.branch_ids.length === 0) && (
+                  <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400">
+                    {language === 'ar' ? 'لا يوجد فروع' : 'No branches'}
+                  </span>
+                )}
+              </div>
+
               <div className="mt-4 pt-4 border-t border-border flex flex-col gap-2 text-sm text-muted">
                 <div className="flex justify-between items-center">
                   <span className="opacity-80">{t.pricing}:</span>

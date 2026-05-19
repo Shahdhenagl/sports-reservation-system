@@ -111,3 +111,21 @@ CREATE POLICY "Allow select for anon" ON transactions FOR SELECT USING (true);
 
 -- Enable Realtime for transactions
 ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+
+-- 7. Add branch_ids to activities and branch_id to bookings
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS branch_ids JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id);
+
+-- 8. Re-configure RLS and policies for branches & activities to ensure anonymous read/write
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for everyone" ON branches;
+CREATE POLICY "Allow all for everyone" ON branches FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for everyone" ON activities;
+CREATE POLICY "Allow all for everyone" ON activities FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. Insert a default branch if empty
+INSERT INTO branches (name, address, phone)
+SELECT 'الفرع الرئيسي', '123 شارع الرياضة، القاهرة', '01000000000'
+WHERE NOT EXISTS (SELECT 1 FROM branches);
