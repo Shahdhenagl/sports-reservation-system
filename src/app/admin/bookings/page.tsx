@@ -14,47 +14,45 @@ export default function BookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const supabase = createClient();
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    setDebugInfo("جاري فحص البيانات...");
+  const fetchBookings = async (background = false) => {
+    if (!background) setLoading(true);
     try {
-      // 1. Check Auth Status
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setDebugInfo("خطأ: أنت غير مسجل دخول في قاعدة البيانات.");
-      } else {
-        setDebugInfo(`تم تسجيل الدخول بنجاح: ${user.email}`);
-      }
-
-      // 2. Simple fetch bookings only (No join)
-      const { data, error, count } = await (supabase.from("bookings") as any)
-        .select("*", { count: 'exact' });
+      const { data, error } = await (supabase.from("bookings") as any)
+        .select("*, customers(*)")
+        .order("created_at", { ascending: false });
       
-      if (error) {
-        setDebugInfo(prev => `${prev} | خطأ في جلب الحجوزات: ${error.message}`);
-        throw error;
-      }
-
-      setDebugInfo(prev => `${prev} | عدد الحجوزات في السيرفر: ${count}`);
-      
-      // 3. If bookings found, try to fetch with customers
-      const { data: fullData } = await (supabase.from("bookings") as any)
-        .select("*, customers(*)");
-      
-      setBookings(fullData || data || []);
+      if (error) throw error;
+      setBookings(data || []);
     } catch (err: any) {
       console.error("Fetch error:", err);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchBookings();
   }, [statusFilter]);
+
+  useEffect(() => {
+    // Listen for realtime updates in bookings table
+    const channel = supabase
+      .channel("bookings-realtime-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => {
+          fetchBookings(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleApprove = async (booking: any) => {
     const nextStatus = booking.payment_type === 'partial' ? 'partially_paid' : 'approved';
@@ -233,10 +231,7 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Debug Section */}
-      <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-        <p className="text-xs font-mono text-yellow-500">DEBUG: {debugInfo}</p>
-      </div>
+      {/* Realtime updates are applied dynamically */}
 
       <div className="glass rounded-2xl overflow-hidden border border-border/50">
         {loading ? (

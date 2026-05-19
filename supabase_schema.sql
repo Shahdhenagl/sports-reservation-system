@@ -83,3 +83,6 @@ DROP POLICY IF EXISTS "Allow select for anon" ON bookings;
 CREATE POLICY "Allow all for authenticated" ON bookings FOR ALL USING (true);
 CREATE POLICY "Allow insert for anon" ON bookings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow select for anon" ON bookings FOR SELECT USING (true);
+
+-- 5. Enable Realtime for bookings
+ALTER PUBLICATION supabase_realtime ADD TABLE bookings;
