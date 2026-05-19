@@ -33,9 +33,8 @@ export default function CollectionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [periodType, setPeriodType] = useState<"daily" | "monthly" | "yearly">("daily");
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [schemaError, setSchemaError] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -115,6 +114,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Date Filtering Helper
+  const filterByDate = (dateStr: string) => {
+    if (!dateStr) return false;
+    const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+    const [txYear, txMonth, txDay] = datePart.split("-").map(Number);
+    const [selYear, selMonth, selDay] = selectedDate.split("-").map(Number);
+
+    if (periodType === "daily") {
+      return txYear === selYear && txMonth === selMonth && txDay === selDay;
+    } else if (periodType === "monthly") {
+      return txYear === selYear && txMonth === selMonth;
+    } else if (periodType === "yearly") {
+      return txYear === selYear;
+    }
+    return true;
+  };
+
   // Filtered transactions
   const filteredTransactions = transactions.filter(tx => {
     // 1. Search Term
@@ -130,43 +146,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
     if (!matchesType || !matchesMethod) return false;
 
     // 3. Date Filter
-    if (dateFilter === "all") return true;
-    const txDate = new Date(tx.created_at);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    if (dateFilter === "today") {
-      const txDateStr = txDate.toDateString();
-      const todayStr = today.toDateString();
-      return txDateStr === todayStr;
-    }
-    if (dateFilter === "7days") {
-      const limit = new Date();
-      limit.setDate(limit.getDate() - 7);
-      limit.setHours(0,0,0,0);
-      return txDate >= limit;
-    }
-    if (dateFilter === "30days") {
-      const limit = new Date();
-      limit.setDate(limit.getDate() - 30);
-      limit.setHours(0,0,0,0);
-      return txDate >= limit;
-    }
-    if (dateFilter === "custom") {
-      let startMatch = true;
-      let endMatch = true;
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0,0,0,0);
-        startMatch = txDate >= start;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23,59,59,999);
-        endMatch = txDate <= end;
-      }
-      return startMatch && endMatch;
-    }
+    if (!filterByDate(tx.created_at)) return false;
 
     return true;
   });
@@ -264,6 +244,51 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
         </div>
       ) : (
         <>
+          {/* Premium Segmented Date Filter Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-surface border border-border/60 p-4 rounded-2xl shadow-sm justify-between mb-6">
+            {/* Custom Date Input Display */}
+            <div className="relative flex items-center bg-background border border-border shadow-inner rounded-xl px-4 py-2.5 hover:bg-surface-hover transition-all cursor-pointer group">
+              <span className="font-bold text-foreground text-sm font-mono tracking-wide">
+                {selectedDate.split("-").reverse().join("/")}
+              </span>
+              <Calendar className="w-5 h-5 text-red-600 ml-3" />
+              <input 
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </div>
+
+            {/* Period Selection Pill Control */}
+            <div className="flex bg-surface-hover border border-border/80 rounded-xl p-1 items-center gap-1">
+              <button
+                onClick={() => setPeriodType("yearly")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  periodType === "yearly" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {language === 'ar' ? 'سنوي' : 'Yearly'}
+              </button>
+              <button
+                onClick={() => setPeriodType("monthly")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  periodType === "monthly" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {language === 'ar' ? 'شهري' : 'Monthly'}
+              </button>
+              <button
+                onClick={() => setPeriodType("daily")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  periodType === "daily" ? "bg-white text-red-600 shadow-sm" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {language === 'ar' ? 'يومي' : 'Daily'}
+              </button>
+            </div>
+          </div>
+
           {/* Key Metrics Grid */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div className="glass rounded-2xl p-6 border border-border/50 relative overflow-hidden group">
@@ -391,46 +416,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
               </div>
             </div>
 
-            {/* Date Filters Row */}
-            <div className="flex flex-wrap items-center gap-4 bg-surface/20 border border-border/40 p-3 rounded-xl">
-              <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
-                <Calendar className="w-4 h-4 text-muted" />
-                <select
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
-                >
-                  <option value="all">{language === 'ar' ? 'كل الأوقات' : 'All Time'}</option>
-                  <option value="today">{language === 'ar' ? 'اليوم' : 'Today'}</option>
-                  <option value="7days">{language === 'ar' ? 'آخر 7 أيام' : 'Last 7 Days'}</option>
-                  <option value="30days">{language === 'ar' ? 'آخر 30 يوم' : 'Last 30 Days'}</option>
-                  <option value="custom">{language === 'ar' ? 'فترة مخصصة' : 'Custom Period'}</option>
-                </select>
-              </div>
 
-              {dateFilter === "custom" && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted">{language === 'ar' ? 'من:' : 'From:'}</span>
-                    <input 
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted">{language === 'ar' ? 'إلى:' : 'To:'}</span>
-                    <input 
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Ledger Table */}
