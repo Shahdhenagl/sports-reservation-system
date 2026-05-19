@@ -18,7 +18,9 @@ import {
   TrendingUp,
   AlertTriangle,
   Copy,
-  Check
+  Check,
+  Printer,
+  Calendar
 } from "lucide-react";
 
 export default function CollectionsPage() {
@@ -31,6 +33,9 @@ export default function CollectionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [methodFilter, setMethodFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [schemaError, setSchemaError] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -110,41 +115,86 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Calculations
-  const collections = transactions.filter(tx => tx.type === "collection");
-  const refunds = transactions.filter(tx => tx.type === "refund");
+  // Filtered transactions
+  const filteredTransactions = transactions.filter(tx => {
+    // 1. Search Term
+    const customerName = tx.bookings?.customers?.full_name || "";
+    const matchesSearch = 
+      tx.booking_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    // 2. Type & Method
+    const matchesType = typeFilter === "all" || tx.type === typeFilter;
+    const matchesMethod = methodFilter === "all" || tx.method === methodFilter;
+    if (!matchesType || !matchesMethod) return false;
+
+    // 3. Date Filter
+    if (dateFilter === "all") return true;
+    const txDate = new Date(tx.created_at);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    if (dateFilter === "today") {
+      const txDateStr = txDate.toDateString();
+      const todayStr = today.toDateString();
+      return txDateStr === todayStr;
+    }
+    if (dateFilter === "7days") {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 7);
+      limit.setHours(0,0,0,0);
+      return txDate >= limit;
+    }
+    if (dateFilter === "30days") {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 30);
+      limit.setHours(0,0,0,0);
+      return txDate >= limit;
+    }
+    if (dateFilter === "custom") {
+      let startMatch = true;
+      let endMatch = true;
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0,0,0,0);
+        startMatch = txDate >= start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23,59,59,999);
+        endMatch = txDate <= end;
+      }
+      return startMatch && endMatch;
+    }
+
+    return true;
+  });
+
+  // Calculations based on filtered transactions so stats update instantly!
+  const collections = filteredTransactions.filter(tx => tx.type === "collection");
+  const refunds = filteredTransactions.filter(tx => tx.type === "refund");
 
   const totalCollected = collections.reduce((acc, tx) => acc + parseFloat(tx.amount || 0), 0);
   const totalRefunded = refunds.reduce((acc, tx) => acc + parseFloat(tx.amount || 0), 0);
   const netIncome = totalCollected - totalRefunded;
 
-  // Method Breakdown
-  const instapayTotal = transactions
+  // Method Breakdown based on filtered transactions
+  const instapayTotal = filteredTransactions
     .filter(tx => tx.method === "instapay")
     .reduce((acc, tx) => acc + (tx.type === "collection" ? 1 : -1) * parseFloat(tx.amount || 0), 0);
 
-  const walletTotal = transactions
+  const walletTotal = filteredTransactions
     .filter(tx => tx.method === "wallet")
     .reduce((acc, tx) => acc + (tx.type === "collection" ? 1 : -1) * parseFloat(tx.amount || 0), 0);
 
-  const cashTotal = transactions
+  const cashTotal = filteredTransactions
     .filter(tx => tx.method === "cash")
     .reduce((acc, tx) => acc + (tx.type === "collection" ? 1 : -1) * parseFloat(tx.amount || 0), 0);
 
-  // Filtered transactions
-  const filteredTransactions = transactions.filter(tx => {
-    const customerName = tx.bookings?.customers?.full_name || "";
-    const matchesSearch = 
-      tx.booking_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || tx.type === typeFilter;
-    const matchesMethod = methodFilter === "all" || tx.method === methodFilter;
-    return matchesSearch && matchesType && matchesMethod;
-  });
-
   return (
     <div className="space-y-6" dir={direction}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {language === 'ar' ? 'التحصيلات والمدفوعات المالية' : 'Financial Collections & Payments'}
@@ -153,6 +203,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`;
             {language === 'ar' ? 'مراقبة وإدارة كل المقبوضات والمرتجع المالي لحظة بلحظة.' : 'Monitor and manage all cash inflows and refund outflows in real-time.'}
           </p>
         </div>
+        <button
+          onClick={() => window.print()}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 text-sm"
+        >
+          <Printer className="w-4 h-4" />
+          {language === 'ar' ? 'تصدير تقرير A4 PDF' : 'Export A4 PDF Report'}
+        </button>
       </div>
 
       {schemaError ? (
@@ -290,45 +347,88 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
           </div>
 
           {/* Searching and Filters */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} h-4 w-4 text-muted`} />
-              <input
-                type="text"
-                placeholder={language === 'ar' ? 'البحث برقم الحجز...' : 'Search by Booking Code...'}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full bg-surface border border-border rounded-xl py-2.5 ${direction === 'rtl' ? 'pr-11 pl-4' : 'pl-11 pr-4'} text-sm text-foreground placeholder-muted outline-none focus:ring-2 focus:ring-primary`}
-              />
+          <div className="flex flex-col gap-4 space-y-3 print:hidden">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} h-4 w-4 text-muted`} />
+                <input
+                  type="text"
+                  placeholder={language === 'ar' ? 'البحث برقم الحجز أو اسم العميل...' : 'Search by Booking Code or Customer...'}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`w-full bg-surface border border-border rounded-xl py-2.5 ${direction === 'rtl' ? 'pr-11 pl-4' : 'pl-11 pr-4'} text-sm text-foreground placeholder-muted outline-none focus:ring-2 focus:ring-primary`}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
+                  <Filter className="w-4 h-4 text-muted" />
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'كل العمليات' : 'All Types'}</option>
+                    <option value="collection">{language === 'ar' ? 'التحصيل فقط' : 'Collections'}</option>
+                    <option value="refund">{language === 'ar' ? 'المرتجع فقط' : 'Refunds'}</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
+                  <Filter className="w-4 h-4 text-muted" />
+                  <select
+                    value={methodFilter}
+                    onChange={(e) => setMethodFilter(e.target.value)}
+                    className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'كل طرق الدفع' : 'All Methods'}</option>
+                    <option value="instapay">InstaPay</option>
+                    <option value="wallet">{language === 'ar' ? 'المحافظ' : 'Wallets'}</option>
+                    <option value="cash">{language === 'ar' ? 'الكاش' : 'Cash'}</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Date Filters Row */}
+            <div className="flex flex-wrap items-center gap-4 bg-surface/20 border border-border/40 p-3 rounded-xl">
               <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
-                <Filter className="w-4 h-4 text-muted" />
+                <Calendar className="w-4 h-4 text-muted" />
                 <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
                   className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
                 >
-                  <option value="all">{language === 'ar' ? 'كل العمليات' : 'All Types'}</option>
-                  <option value="collection">{language === 'ar' ? 'التحصيل فقط' : 'Collections'}</option>
-                  <option value="refund">{language === 'ar' ? 'المرتجع فقط' : 'Refunds'}</option>
+                  <option value="all">{language === 'ar' ? 'كل الأوقات' : 'All Time'}</option>
+                  <option value="today">{language === 'ar' ? 'اليوم' : 'Today'}</option>
+                  <option value="7days">{language === 'ar' ? 'آخر 7 أيام' : 'Last 7 Days'}</option>
+                  <option value="30days">{language === 'ar' ? 'آخر 30 يوم' : 'Last 30 Days'}</option>
+                  <option value="custom">{language === 'ar' ? 'فترة مخصصة' : 'Custom Period'}</option>
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
-                <Filter className="w-4 h-4 text-muted" />
-                <select
-                  value={methodFilter}
-                  onChange={(e) => setMethodFilter(e.target.value)}
-                  className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
-                >
-                  <option value="all">{language === 'ar' ? 'كل طرق الدفع' : 'All Methods'}</option>
-                  <option value="instapay">InstaPay</option>
-                  <option value="wallet">{language === 'ar' ? 'المحافظ' : 'Wallets'}</option>
-                  <option value="cash">{language === 'ar' ? 'الكاش' : 'Cash'}</option>
-                </select>
-              </div>
+              {dateFilter === "custom" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted">{language === 'ar' ? 'من:' : 'From:'}</span>
+                    <input 
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted">{language === 'ar' ? 'إلى:' : 'To:'}</span>
+                    <input 
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -406,6 +506,108 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
           </div>
         </>
       )}
+
+      {/* Print-Only A4 Report Layout */}
+      <div className="hidden print:block print-report p-8 space-y-6" dir={direction}>
+        {/* Report Header */}
+        <div className="flex justify-between items-center border-b-2 border-primary pb-4">
+          <div>
+            <h1 className="text-2xl font-black text-primary">
+              {language === 'ar' ? 'تقرير التحصيلات والعمليات المالية' : 'Financial Collections & Payments Report'}
+            </h1>
+            <p className="text-xs text-muted mt-1">
+              {language === 'ar' ? `تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}` : `Report Date: ${new Date().toLocaleDateString()}`}
+            </p>
+          </div>
+          <div className="text-right">
+            <h2 className="text-lg font-bold text-foreground">{language === 'ar' ? 'منظومة الملاعب الرياضية' : 'Sports Arena System'}</h2>
+            <p className="text-xs text-muted">{language === 'ar' ? 'لوحة تحكم الإدارة' : 'Admin Panel'}</p>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-4 border border-border/80 rounded-xl p-4 bg-surface/5">
+          <div className="text-center p-2 border-l border-border">
+            <p className="text-xs text-muted mb-1">{language === 'ar' ? 'إجمالي التحصيلات' : 'Total Collected'}</p>
+            <h3 className="text-lg font-black text-green-600">EGP {totalCollected.toLocaleString()}</h3>
+          </div>
+          <div className="text-center p-2 border-l border-border">
+            <p className="text-xs text-muted mb-1">{language === 'ar' ? 'إجمالي المسترد' : 'Total Refunded'}</p>
+            <h3 className="text-lg font-black text-red-600">EGP {totalRefunded.toLocaleString()}</h3>
+          </div>
+          <div className="text-center p-2">
+            <p className="text-xs text-muted mb-1">{language === 'ar' ? 'صافي المقبوضات' : 'Net Flow'}</p>
+            <h3 className="text-lg font-black text-primary">EGP {netIncome.toLocaleString()}</h3>
+          </div>
+        </div>
+
+        {/* Table */}
+        <table className="w-full text-right border-collapse mt-4 text-xs">
+          <thead>
+            <tr className="border-b-2 border-border bg-surface/10">
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'رقم الحجز' : 'Ref'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'اسم العميل' : 'Customer'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'نوع العملية' : 'Type'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'طريقة الدفع' : 'Method'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'المبلغ' : 'Amount'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'التاريخ والوقت' : 'Date & Time'}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {filteredTransactions.map((tx) => (
+              <tr key={tx.id} className="page-break-inside-avoid">
+                <td className="py-2 px-3 font-mono font-bold">{tx.booking_ref}</td>
+                <td className="py-2 px-3">{tx.bookings?.customers?.full_name || "-"}</td>
+                <td className="py-2 px-3 font-medium">
+                  {tx.type === "collection" 
+                    ? (language === 'ar' ? 'تحصيل' : 'Collection') 
+                    : (language === 'ar' ? 'مرتجع' : 'Refund')}
+                </td>
+                <td className="py-2 px-3 font-mono">
+                  {tx.method === "instapay" ? 'InstaPay' : tx.method === "wallet" ? (language === 'ar' ? 'محفظة' : 'Wallet') : (language === 'ar' ? 'كاش' : 'Cash')}
+                </td>
+                <td className={`py-2 px-3 font-bold ${tx.type === "collection" ? "text-green-600" : "text-red-600"}`}>
+                  {tx.type === "collection" ? "+" : "-"} EGP {parseFloat(tx.amount || 0).toLocaleString()}
+                </td>
+                <td className="py-2 px-3 text-[10px] text-muted font-mono">
+                  {new Date(tx.created_at).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Global CSS Style tag to handle A4 Print media nicely */}
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          /* Hide the sidebar, navbar, filters, buttons, etc. */
+          body > *:not(.print-report) {
+            display: none !important;
+          }
+          .print-report {
+            display: block !important;
+            width: 100% !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            margin: 0 !important;
+            padding: 20px !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+          }
+          .page-break-inside-avoid {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

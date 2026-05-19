@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign, Search, Filter, Printer, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function BookingsPage() {
@@ -29,6 +29,12 @@ export default function BookingsPage() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRefundAmount, setRejectRefundAmount] = useState("");
   const [rejectRefundMethod, setRejectRefundMethod] = useState("instapay");
+
+  // Search & Date Filter State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const supabase = createClient();
 
@@ -381,35 +387,157 @@ export default function BookingsPage() {
     }
   };
 
+  const filteredBookings = bookings.filter((booking) => {
+    // 1. Status Filter
+    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
+    if (!matchesStatus) return false;
+
+    // 2. Search Term Filter
+    const customerName = booking.customers?.full_name || "";
+    const matchesSearch = 
+      booking.booking_ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    // 3. Date Filter
+    if (dateFilter === "all") return true;
+    
+    const bookingDate = new Date(booking.booking_date);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    if (dateFilter === "today") {
+      const bDateStr = bookingDate.toDateString();
+      const tDateStr = today.toDateString();
+      return bDateStr === tDateStr || booking.booking_date === new Date().toISOString().split('T')[0];
+    }
+    if (dateFilter === "7days") {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 7);
+      limit.setHours(0,0,0,0);
+      return bookingDate >= limit;
+    }
+    if (dateFilter === "30days") {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 30);
+      limit.setHours(0,0,0,0);
+      return bookingDate >= limit;
+    }
+    if (dateFilter === "custom") {
+      let startMatch = true;
+      let endMatch = true;
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0,0,0,0);
+        startMatch = bookingDate >= start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23,59,59,999);
+        endMatch = bookingDate <= end;
+      }
+      return startMatch && endMatch;
+    }
+
+    return true;
+  });
+
   return (
     <div className="space-y-6" dir={direction}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.bookings}</h1>
           <p className="text-muted">{t.bookingsSubtitle}</p>
         </div>
         
-        {/* Status Filter */}
-        <div className="flex gap-2">
-          {[
-            { value: 'all', label: language === 'ar' ? 'الكل' : 'All' },
-            { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
-            { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
-            { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
-            { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
-          ].map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setStatusFilter(filter.value)}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                statusFilter === filter.value 
-                  ? 'bg-primary text-white shadow-md' 
-                  : 'bg-surface text-muted hover:bg-surface-hover'
-              }`}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status Filter */}
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: language === 'ar' ? 'الكل' : 'All' },
+              { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
+              { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
+              { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
+              { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setStatusFilter(filter.value)}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                  statusFilter === filter.value 
+                    ? 'bg-primary text-white shadow-md' 
+                    : 'bg-surface text-muted hover:bg-surface-hover'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => window.print()}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 text-sm"
+          >
+            <Printer className="w-4 h-4" />
+            {language === 'ar' ? 'تصدير تقرير A4 PDF' : 'Export A4 PDF Report'}
+          </button>
+        </div>
+      </div>
+
+      {/* Searching and Date filter row */}
+      <div className="flex flex-col gap-4 space-y-3 print:hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-4' : 'left-4'} h-4 w-4 text-muted`} />
+            <input
+              type="text"
+              placeholder={language === 'ar' ? 'البحث برقم الحجز أو اسم العميل...' : 'Search by Booking Code or Customer...'}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`w-full bg-surface border border-border rounded-xl py-2.5 ${direction === 'rtl' ? 'pr-11 pl-4' : 'pl-11 pr-4'} text-sm text-foreground placeholder-muted outline-none focus:ring-2 focus:ring-primary`}
+            />
+          </div>
+        </div>
+
+        {/* Date Filter Row */}
+        <div className="flex flex-wrap items-center gap-4 bg-surface/20 border border-border/40 p-3 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-1.5">
+            <Calendar className="w-4 h-4 text-muted" />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-transparent text-sm text-foreground outline-none cursor-pointer"
             >
-              {filter.label}
-            </button>
-          ))}
+              <option value="all">{language === 'ar' ? 'كل الأوقات' : 'All Time'}</option>
+              <option value="today">{language === 'ar' ? 'اليوم' : 'Today'}</option>
+              <option value="7days">{language === 'ar' ? 'آخر 7 أيام' : 'Last 7 Days'}</option>
+              <option value="30days">{language === 'ar' ? 'آخر 30 يوم' : 'Last 30 Days'}</option>
+              <option value="custom">{language === 'ar' ? 'فترة مخصصة' : 'Custom Period'}</option>
+            </select>
+          </div>
+
+          {dateFilter === "custom" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted">{language === 'ar' ? 'من:' : 'From:'}</span>
+                <input 
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted">{language === 'ar' ? 'إلى:' : 'To:'}</span>
+                <input 
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-surface border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -420,9 +548,9 @@ export default function BookingsPage() {
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
-        ) : bookings.length === 0 ? (
+        ) : filteredBookings.length === 0 ? (
           <div className="text-center py-12 text-muted">
-            <p>{language === 'ar' ? 'لا توجد حجوزات' : 'No bookings found'}</p>
+            <p>{language === 'ar' ? 'لا توجد حجوزات مطابقة للبحث' : 'No matching bookings found'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -440,8 +568,7 @@ export default function BookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings
-                  .filter((booking) => statusFilter === 'all' || booking.status === statusFilter)
+                {filteredBookings
                   .map((booking) => (
                     <tr key={booking.id} className="border-b border-border/30 hover:bg-surface/30 transition-colors">
                       <td className="px-4 py-3 font-mono font-semibold text-primary">{booking.booking_ref}</td>
@@ -884,6 +1011,117 @@ export default function BookingsPage() {
           </div>
         </div>
       )}
+
+      {/* Print-Only A4 Bookings Report Layout */}
+      <div className="hidden print:block print-report p-8 space-y-6" dir={direction}>
+        {/* Report Header */}
+        <div className="flex justify-between items-center border-b-2 border-primary pb-4">
+          <div>
+            <h1 className="text-2xl font-black text-primary">
+              {language === 'ar' ? 'تقرير حجوزات الملاعب والأنشطة' : 'Sports Bookings & Reservations Report'}
+            </h1>
+            <p className="text-xs text-muted mt-1">
+              {language === 'ar' ? `تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}` : `Report Date: ${new Date().toLocaleDateString()}`}
+            </p>
+          </div>
+          <div className="text-right">
+            <h2 className="text-lg font-bold text-foreground">{language === 'ar' ? 'منظومة الملاعب الرياضية' : 'Sports Arena System'}</h2>
+            <p className="text-xs text-muted">{language === 'ar' ? 'لوحة تحكم الإدارة' : 'Admin Panel'}</p>
+          </div>
+        </div>
+
+        {/* Summary Grid */}
+        <div className="grid grid-cols-4 gap-4 border border-border/80 rounded-xl p-4 bg-surface/5 text-center text-xs">
+          <div className="border-l border-border">
+            <p className="text-muted mb-1">{language === 'ar' ? 'إجمالي الحجوزات المفلترة' : 'Total Filtered Bookings'}</p>
+            <h3 className="text-lg font-black text-foreground">{filteredBookings.length}</h3>
+          </div>
+          <div className="border-l border-border">
+            <p className="text-muted mb-1">{language === 'ar' ? 'المقبولة' : 'Approved'}</p>
+            <h3 className="text-lg font-black text-green-600">
+              {filteredBookings.filter(b => b.status === 'approved').length}
+            </h3>
+          </div>
+          <div className="border-l border-border">
+            <p className="text-muted mb-1">{language === 'ar' ? 'مقبولة جزئياً' : 'Partially Paid'}</p>
+            <h3 className="text-lg font-black text-blue-600">
+              {filteredBookings.filter(b => b.status === 'partially_paid').length}
+            </h3>
+          </div>
+          <div>
+            <p className="text-muted mb-1">{language === 'ar' ? 'في الانتظار' : 'Pending'}</p>
+            <h3 className="text-lg font-black text-yellow-600">
+              {filteredBookings.filter(b => b.status === 'pending').length}
+            </h3>
+          </div>
+        </div>
+
+        {/* Table */}
+        <table className="w-full text-right border-collapse mt-4 text-xs">
+          <thead>
+            <tr className="border-b-2 border-border bg-surface/10">
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'رقم الحجز' : 'Ref'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'العميل' : 'Customer'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'النشاط' : 'Activity'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'التاريخ والوقت' : 'Date & Time'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'المبلغ الكلي' : 'Total'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'المدفوع' : 'Paid'}</th>
+              <th className="py-2.5 px-3 font-bold">{language === 'ar' ? 'الحالة' : 'Status'}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {filteredBookings.map((booking) => (
+              <tr key={booking.id} className="page-break-inside-avoid">
+                <td className="py-2 px-3 font-mono font-bold">{booking.booking_ref}</td>
+                <td className="py-2 px-3">{booking.customers?.full_name || "-"}</td>
+                <td className="py-2 px-3">{booking.activity_name || "-"}</td>
+                <td className="py-2 px-3 font-mono">
+                  {booking.booking_date} | {booking.booking_time}
+                </td>
+                <td className="py-2 px-3 font-bold">EGP {booking.total_price || 0}</td>
+                <td className="py-2 px-3 font-bold text-green-600">EGP {booking.amount_paid || 0}</td>
+                <td className="py-2 px-3">
+                  {booking.status === 'pending' ? (language === 'ar' ? 'في الانتظار' : 'Pending') :
+                   booking.status === 'partially_paid' ? (language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid') :
+                   booking.status === 'approved' ? (language === 'ar' ? 'مقبول' : 'Approved') :
+                   (language === 'ar' ? 'مرفوض' : 'Rejected')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Global CSS Style tag to handle A4 Print media nicely */}
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          /* Hide the sidebar, navbar, filters, buttons, etc. */
+          body > *:not(.print-report) {
+            display: none !important;
+          }
+          .print-report {
+            display: block !important;
+            width: 100% !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            margin: 0 !important;
+            padding: 20px !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+          }
+          .page-break-inside-avoid {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
