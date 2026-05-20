@@ -582,6 +582,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
             overflow: visible !important;
             margin: 0 !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           /* Hide all Next.js screen-only layout wrappers & decorations */
@@ -589,40 +591,126 @@ ALTER PUBLICATION supabase_realtime ADD TABLE transactions;`}
           nav,
           header,
           button,
-          .print\:hidden {
+          input,
+          select,
+          .print\\:hidden,
+          div[class*="w-64"],
+          div[class*="z-50"] {
             display: none !important;
           }
 
-          /* Force sidebar container in layout to hide */
-          div[class*="w-64"] {
-            display: none !important;
-          }
-
-          /* Reset absolute/flex/overflow layout limitations of Next.js */
-          div, main, section {
-            height: auto !important;
-            overflow: visible !important;
-            position: relative !important;
+          /* Reset absolute/flex/overflow layout limitations of Next.js safely on wrappers only */
+          div.flex.h-screen,
+          div.flex-1.flex.flex-col,
+          main {
             display: block !important;
+            height: auto !important;
+            width: 100% !important;
+            overflow: visible !important;
+            position: static !important;
             padding: 0 !important;
             margin: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
             background: transparent !important;
           }
 
-          /* Force the print report to show beautifully */
+          /* Force the print report to show beautifully and span full page */
           .print-report {
             display: block !important;
             width: 100% !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            padding: 20px !important;
+            max-width: 100% !important;
+            position: relative !important;
+            padding: 24px !important;
             margin: 0 !important;
             background: white !important;
-            color: black !important;
-            z-index: 9999999 !important;
+            color: #1e293b !important;
+            box-sizing: border-box !important;
+          }
+
+          /* Report Header Accent Styling */
+          .print-report .border-b-2 {
+            border-bottom: 2px solid #059669 !important; /* Emerald primary green */
+            padding-bottom: 12px !important;
+          }
+
+          .print-report h1 {
+            color: #059669 !important;
+            font-size: 22px !important;
+            font-weight: 800 !important;
+            margin: 0 !important;
+          }
+
+          .print-report h2 {
+            color: #0f172a !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+          }
+
+          /* Summary Grid cards - Keep beautiful 3-column layout on print */
+          .print-report .grid-cols-3 {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 16px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 12px !important;
+            padding: 16px !important;
+            background-color: #f8fafc !important;
+            margin-top: 16px !important;
+            margin-bottom: 16px !important;
+          }
+
+          .print-report .border-l {
+            border-left: 1px solid #cbd5e1 !important;
+          }
+
+          .print-report .text-center {
+            text-align: center !important;
+          }
+
+          /* Table premium printable styling */
+          .print-report table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-top: 24px !important;
+          }
+
+          .print-report th {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            padding: 8px 12px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+          }
+
+          /* Force text alignment matching layout direction */
+          .print-report[dir="rtl"] th,
+          .print-report[dir="rtl"] td {
+            text-align: right !important;
+          }
+
+          .print-report[dir="ltr"] th,
+          .print-report[dir="ltr"] td {
+            text-align: left !important;
+          }
+
+          .print-report td {
+            padding: 8px 12px !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            font-size: 11px !important;
+            color: #334155 !important;
+          }
+
+          .print-report tr:nth-child(even) {
+            background-color: #f8fafc !important;
+          }
+
+          .print-report .text-green-600 {
+            color: #16a34a !important;
+          }
+
+          .print-report .text-red-600 {
+            color: #dc2626 !important;
           }
           
           @page {

@@ -1,37 +1,25 @@
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const path = require('path');
 
-// Read .env.local
-const envPath = path.join(__dirname, '../.env.local');
-const envContent = fs.readFileSync(envPath, 'utf8');
-
-const getEnvVar = (key) => {
-  const match = envContent.match(new RegExp(`${key}=(.*)`));
-  return match ? match[1].trim() : null;
-};
-
-const supabaseUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
-const supabaseKey = getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+const supabaseUrl = 'https://gkrnetehaqpdasloqjaw.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdrcm5ldGVoYXFwZGFzbG9xamF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODA5NjksImV4cCI6MjA5NDE1Njk2OX0.S5v6KI611CM_I5CwLlDryQRmZvmEjujHi-lfyS0gJ8k';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function check() {
-  console.log("Checking Supabase connection...");
-  
+async function main() {
+  console.log("--- FETCHING BRANCHES ---");
   const { data: branches, error: bErr } = await supabase.from('branches').select('*');
-  if (bErr) {
-    console.error("Error fetching branches:", bErr);
-  } else {
-    console.log("Branches:", branches);
-  }
+  console.log("Branches error:", bErr);
+  console.log("Branches:", branches);
 
-  const { data: activities, error: aErr } = await supabase.from('activities').select('*').limit(1);
-  if (aErr) {
-    console.error("Error fetching activities:", aErr);
-  } else {
-    console.log("Activity record sample:", activities);
-  }
+  console.log("\n--- FETCHING ACTIVITIES ---");
+  const { data: activities, error: aErr } = await supabase.from('activities').select('*');
+  console.log("Activities error:", aErr);
+  console.log("Activities:", activities);
+
+  console.log("\n--- FETCHING BOOKINGS ---");
+  const { data: bookings, error: boErr } = await supabase.from('bookings').select('*');
+  console.log("Bookings error:", boErr);
+  console.log("Bookings:", bookings ? bookings.slice(0, 5) : null);
 }
 
-check();
+main();
