@@ -3,8 +3,26 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translations } from "@/lib/translations";
-import { Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, Image as ImageIcon, DollarSign, Search, Filter, Printer, Calendar, Plus, Check } from "lucide-react";
+import { 
+  Loader2, CheckCircle2, XCircle, Clock, Eye, X, MessageCircle, 
+  Image as ImageIcon, DollarSign, Search, Filter, Printer, Calendar, 
+  Plus, Check, Building2, MapPin, Trophy, Medal, Dumbbell, Target, 
+  Bike, Waves, Swords, Flag, Crosshair, Activity, Users 
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+const AVAILABLE_ICONS = [
+  { name: "Trophy", icon: Trophy },
+  { name: "Medal", icon: Medal },
+  { name: "Dumbbell", icon: Dumbbell },
+  { name: "Target", icon: Target },
+  { name: "Bike", icon: Bike },
+  { name: "Waves", icon: Waves },
+  { name: "Swords", icon: Swords },
+  { name: "Flag", icon: Flag },
+  { name: "Crosshair", icon: Crosshair },
+  { name: "Activity", icon: Activity },
+];
 
 export default function BookingsPage() {
   const { language, direction } = useLanguage();
@@ -56,6 +74,11 @@ export default function BookingsPage() {
   const [formNotes, setFormNotes] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
 
+  // Time slots states
+  const [adminAvailableTimeSlots, setAdminAvailableTimeSlots] = useState<string[]>([]);
+  const [adminSelectedTimes, setAdminSelectedTimes] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
   const supabase = createClient();
 
   const fetchFormData = async () => {
@@ -82,13 +105,111 @@ export default function BookingsPage() {
   };
 
   useEffect(() => {
+    let active = true;
+    async function loadAdminSlots() {
+      if (formDate && formDuration && formActivityId && formBranchId) {
+        setLoadingSlots(true);
+        const selectedActivity = activities.find(a => a.id === formActivityId);
+        if (!selectedActivity) {
+          setAdminAvailableTimeSlots([]);
+          setLoadingSlots(false);
+          return;
+        }
+
+        const durationMinutes = parseInt(formDuration) || 60;
+        const slots = [];
+        const openTime = selectedActivity.open_time || "08:00";
+        const closeTime = selectedActivity.close_time || "22:00";
+
+        const [openH, openM] = openTime.split(':').map(Number);
+        const [closeH, closeM] = closeTime.split(':').map(Number);
+
+        const startMinutes = openH * 60 + openM;
+        let endMinutes = closeH * 60 + closeM;
+
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60;
+        }
+
+        let currentMinutes = startMinutes;
+
+        const now = new Date();
+        const todayDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const isToday = formDate === todayDateString;
+        const currentHourMinutes = now.getHours() * 60 + now.getMinutes();
+
+        while (currentMinutes <= endMinutes) {
+          if (!isToday || currentMinutes > currentHourMinutes) {
+            const adjustedMinutes = currentMinutes % (24 * 60);
+            const h = Math.floor(adjustedMinutes / 60);
+            const m = adjustedMinutes % 60;
+            slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+          }
+          currentMinutes += durationMinutes;
+        }
+
+        try {
+          let query = (supabase
+            .from('bookings') as any)
+            .select('booking_time')
+            .eq('booking_date', formDate)
+            .eq('activity_id', formActivityId)
+            .neq('status', 'rejected');
+
+          if (formBranchId === 'default-branch-id') {
+            query = query.is('branch_id', null);
+          } else {
+            query = query.eq('branch_id', formBranchId);
+          }
+
+          const { data: existingBookings, error } = await query;
+          if (error) throw error;
+
+          if (existingBookings && active) {
+            const occupied = new Set<string>();
+            existingBookings.forEach((b: any) => {
+              if (b.booking_time) {
+                const times = b.booking_time.split(',').map((t: string) => t.trim());
+                times.forEach((t: string) => occupied.add(t));
+              }
+            });
+            const filteredSlots = slots.filter(s => !occupied.has(s));
+            setAdminAvailableTimeSlots(filteredSlots);
+          } else if (active) {
+            setAdminAvailableTimeSlots(slots);
+          }
+        } catch (error) {
+          console.error("Error loading occupied slots for admin:", error);
+          if (active) setAdminAvailableTimeSlots(slots);
+        } finally {
+          if (active) setLoadingSlots(false);
+        }
+        setAdminSelectedTimes([]);
+      } else {
+        setAdminAvailableTimeSlots([]);
+      }
+    }
+
+    loadAdminSlots();
+    return () => {
+      active = false;
+    };
+  }, [formDate, formDuration, formActivityId, formBranchId, activities]);
+
+  useEffect(() => {
+    setFormTime(adminSelectedTimes.join(', '));
+  }, [adminSelectedTimes]);
+
+  useEffect(() => {
     if (formActivityId) {
       const act = activities.find(a => a.id === formActivityId);
       if (act) {
-        setFormTotalPrice(act.base_price ? act.base_price.toString() : "");
+        const basePrice = act.base_price || 0;
+        const slotsCount = adminSelectedTimes.length || 1;
+        setFormTotalPrice((basePrice * slotsCount).toString());
       }
     }
-  }, [formActivityId, activities]);
+  }, [formActivityId, adminSelectedTimes, activities]);
 
   const fetchBookings = async (background = false) => {
     if (!background) setLoading(true);
@@ -240,6 +361,7 @@ export default function BookingsPage() {
       setFormTotalPrice("");
       setFormAmountPaid("");
       setFormNotes("");
+      setAdminSelectedTimes([]);
 
       // Refresh list
       fetchBookings();
@@ -1192,88 +1314,162 @@ export default function BookingsPage() {
 
       {/* Add Booking Modal */}
       {addBookingOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-950 rounded-[2rem] p-6 shadow-2xl border border-slate-200/50 dark:border-slate-800/80 animate-in zoom-in-95 duration-200 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95 duration-200 my-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/60 mb-4">
-              <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <Plus className="w-6 h-6 text-emerald-600" />
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-6">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                <Plus className="w-6 h-6 text-emerald-500" />
                 {language === 'ar' ? 'إضافة حجز جديد من لوحة التحكم' : 'Add New Admin Booking'}
               </h2>
               <button 
-                onClick={() => setAddBookingOpen(false)}
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl transition-colors text-slate-400 hover:text-slate-650"
+                onClick={() => {
+                  setAddBookingOpen(false);
+                  setAdminSelectedTimes([]);
+                }}
+                className="p-1.5 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddBookingSubmit} className="space-y-4 text-slate-700 dark:text-slate-200">
+            <form onSubmit={handleAddBookingSubmit} className="space-y-6 text-slate-200">
               
               {/* Step 1: Choose Branch First */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-800 dark:text-white block">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-350 uppercase tracking-wider block">
                   {language === 'ar' ? '1. اختر الفرع أولاً:' : '1. Choose Branch First:'}
                 </label>
-                <select 
-                  required
-                  value={formBranchId}
-                  onChange={(e) => {
-                    setFormBranchId(e.target.value);
-                    setFormActivityId(""); // Reset activity when branch changes
-                  }}
-                  className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <option value="">{language === 'ar' ? '-- اختر الفرع --' : '-- Select Branch --'}</option>
-                  {branches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {branches.map((branch) => {
+                    const isSelected = formBranchId === branch.id;
+                    return (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        onClick={() => {
+                          setFormBranchId(branch.id);
+                          setFormActivityId(""); // Reset activity when branch changes
+                        }}
+                        className={`group relative p-4 rounded-2xl border-2 transition-all duration-300 flex items-center gap-3 text-right cursor-pointer active:scale-[0.98] ${
+                          isSelected 
+                            ? 'border-emerald-600 bg-emerald-500/10 shadow-lg shadow-emerald-500/5' 
+                            : 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-950/60'
+                        }`}
+                        dir={direction}
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                          isSelected ? 'bg-emerald-600 text-white scale-105 shadow-md' : 'bg-emerald-950 text-emerald-500'
+                        }`}>
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="block font-black text-sm text-white">
+                            {branch.name}
+                          </span>
+                          <span className="block text-[10px] text-slate-400 truncate">
+                            {branch.address}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-2 left-2 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Step 2: Choose Activity (Filtered by Selected Branch) */}
               {formBranchId && (
-                <div className="space-y-1.5 animate-in fade-in duration-300">
-                  <label className="text-sm font-bold text-slate-800 dark:text-white block">
+                <div className="space-y-3 animate-in fade-in duration-300">
+                  <label className="text-sm font-bold text-slate-350 uppercase tracking-wider block">
                     {language === 'ar' ? '2. اختر النشاط / الرياضة:' : '2. Choose Activity / Sport:'}
                   </label>
-                  <select
-                    required
-                    value={formActivityId}
-                    onChange={(e) => setFormActivityId(e.target.value)}
-                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                  >
-                    <option value="">{language === 'ar' ? '-- اختر النشاط --' : '-- Select Activity --'}</option>
-                    {activities
-                      .filter(activity => {
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(() => {
+                      const filtered = activities.filter(activity => {
                         if (formBranchId === 'default-branch-id') return true;
                         if (!activity.branch_ids || activity.branch_ids.length === 0) return true;
                         return activity.branch_ids.includes(formBranchId);
-                      })
-                      .map(a => (
-                        <option key={a.id} value={a.id}>{language === 'ar' ? a.name_ar : a.name_en} ({a.base_price} EGP)</option>
-                      ))
-                    }
-                  </select>
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="col-span-full text-center py-6 text-slate-400 font-bold text-xs">
+                            {language === 'ar' ? 'لا توجد أنشطة متاحة في هذا الفرع حالياً' : 'No activities available at this branch right now'}
+                          </div>
+                        );
+                      }
+
+                      return filtered.map((activity) => {
+                        const isSelected = formActivityId === activity.id;
+                        return (
+                          <button 
+                            key={activity.id}
+                            type="button"
+                            onClick={() => setFormActivityId(activity.id)}
+                            className={`group relative p-4 rounded-2xl border-2 transition-all duration-300 flex items-center gap-3 text-right cursor-pointer active:scale-[0.98] ${
+                              isSelected 
+                                ? 'border-emerald-600 bg-emerald-500/10 shadow-lg shadow-emerald-500/5' 
+                                : 'border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-950/60'
+                            }`}
+                            dir={direction}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                              isSelected ? 'bg-emerald-600 text-white scale-105 shadow-md' : 'bg-emerald-950 text-emerald-500'
+                            }`}>
+                              {(() => {
+                                const iconObj = AVAILABLE_ICONS.find(i => i.name === (activity.icon_name || "Trophy"));
+                                const IconComp = iconObj ? iconObj.icon : Trophy;
+                                return <IconComp className="w-5 h-5" />;
+                              })()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="block font-black text-sm text-white">
+                                {language === 'ar' ? activity.name_ar : activity.name_en}
+                              </span>
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500 mt-0.5">
+                                <span>EGP {activity.base_price}</span>
+                                <span className="w-0.5 h-0.5 rounded-full bg-emerald-500/40" />
+                                <span className="text-[9px] uppercase opacity-85">
+                                  {activity.pricing_type === 'per_person' ? (language === 'ar' ? 'للفرد' : 'Per Person') : (language === 'ar' ? 'للمباراة' : 'Per Match')}
+                                </span>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="absolute top-2 left-2 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
               )}
 
               {/* Customer Selector / Form */}
               {formActivityId && (
-                <div className="space-y-4 animate-in fade-in duration-300">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200/50 dark:border-slate-800/80 space-y-3">
-                    <label className="text-sm font-bold text-slate-800 dark:text-white block">
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <div className="p-4 bg-slate-950/30 rounded-[1.5rem] border border-slate-800/80 space-y-4 shadow-inner">
+                    <label className="text-sm font-bold text-slate-350 uppercase tracking-wider block">
                       {language === 'ar' ? '3. بيانات العميل:' : '3. Customer Details:'}
                     </label>
                     
                     <select
                       value={formCustomerId}
                       onChange={(e) => setFormCustomerId(e.target.value)}
-                      className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                      className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none transition-all ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
                     >
-                      <option value="">{language === 'ar' ? '➕ عميل جديد (تسجيل عميل جديد)' : '➕ New Customer (Register New)'}</option>
+                      <option value="" className="bg-slate-900">{language === 'ar' ? '➕ عميل جديد (تسجيل عميل جديد)' : '➕ New Customer (Register New)'}</option>
                       {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.full_name} ({c.phone})</option>
+                        <option key={c.id} value={c.id} className="bg-slate-900">{c.full_name} ({c.phone})</option>
                       ))}
                     </select>
 
@@ -1281,141 +1477,203 @@ export default function BookingsPage() {
                     {!formCustomerId && (
                       <div className="grid gap-3 sm:grid-cols-2 pt-2 animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'اسم العميل ثلاثي' : 'Customer Name'}</label>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'اسم العميل ثلاثي' : 'Customer Name'}</label>
                           <input 
                             required
                             type="text" 
                             value={newCustomerName}
                             onChange={(e) => setNewCustomerName(e.target.value)}
                             placeholder={language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohamed'}
-                            className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                            className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm transition-all ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'رقم الموبايل' : 'Phone Number'}</label>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'رقم الموبايل' : 'Phone Number'}</label>
                           <input 
                             required
                             type="tel" 
                             value={newCustomerPhone}
                             onChange={(e) => setNewCustomerPhone(e.target.value)}
                             placeholder="01xxxxxxxxx"
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
+                            className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm text-left font-mono transition-all"
                           />
                         </div>
                         <div className="space-y-1 sm:col-span-2">
-                          <label className="text-xs font-semibold text-slate-500">{language === 'ar' ? 'رقم الواتساب (اختياري)' : 'WhatsApp Number (Optional)'}</label>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'رقم الواتساب (اختياري)' : 'WhatsApp Number (Optional)'}</label>
                           <input 
                             type="tel" 
                             value={newCustomerWhatsapp}
                             onChange={(e) => setNewCustomerWhatsapp(e.target.value)}
                             placeholder={language === 'ar' ? 'اتركه فارغاً ليطابق الموبايل' : 'Leave empty to match phone'}
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
+                            className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm text-left font-mono transition-all"
                           />
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Booking Date & Time Details */}
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'تاريخ الحجز' : 'Date'}</label>
-                      <input 
-                        required
-                        type="date" 
-                        value={formDate}
-                        onChange={(e) => setFormDate(e.target.value)}
-                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                      />
+                  {/* Booking Date & Duration */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'تاريخ الحجز' : 'Date'}</label>
+                      <div className="relative group">
+                        <Calendar className={`absolute top-1/2 -translate-y-1/2 ${direction === 'rtl' ? 'right-3' : 'left-3'} w-4 h-4 text-emerald-500`} />
+                        <input 
+                          required
+                          type="date" 
+                          value={formDate}
+                          onChange={(e) => setFormDate(e.target.value)}
+                          className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2.5 ${direction === 'rtl' ? 'pr-10 pl-4' : 'pl-10 pr-4'} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm font-medium transition-all ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'وقت الحجز (ساعة البدء)' : 'Start Time'}</label>
-                      <input 
-                        required
-                        type="text" 
-                        value={formTime}
-                        onChange={(e) => setFormTime(e.target.value)}
-                        placeholder="18:00"
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المدة (بالدقائق)' : 'Duration (mins)'}</label>
-                      <select
-                        value={formDuration}
-                        onChange={(e) => setFormDuration(e.target.value)}
-                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
-                      >
-                        <option value="60">60 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
-                        <option value="90">90 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
-                        <option value="120">120 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
-                        <option value="180">180 {language === 'ar' ? 'دقيقة' : 'mins'}</option>
-                      </select>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'المدة' : 'Duration'}</label>
+                      
+                      {(() => {
+                        const selectedActivity = activities.find(a => a.id === formActivityId);
+                        const durationOptions = selectedActivity?.durations_options || [60];
+                        
+                        return (
+                          <div className="flex gap-2">
+                            {durationOptions.map((duration: number) => (
+                              <button
+                                key={duration}
+                                type="button"
+                                onClick={() => setFormDuration(duration.toString())}
+                                className={`flex-1 py-2 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
+                                  formDuration === duration.toString()
+                                    ? 'border-emerald-600 bg-emerald-500/10 text-white shadow-md'
+                                    : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                                }`}
+                              >
+                                {duration} {language === 'ar' ? 'دقيقة' : 'mins'}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
+                  {/* Time Slots Grid Selector */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {language === 'ar' ? 'اختر مواعيد الحجز:' : 'Select Booking Times:'}
+                      </label>
+                      <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        {language === 'ar' ? 'تحديد متعدد متاح' : 'Multi-select enabled'}
+                      </span>
+                    </div>
+
+                    {loadingSlots ? (
+                      <div className="flex justify-center items-center py-8 bg-slate-950/30 rounded-2xl border border-slate-850">
+                        <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
+                      </div>
+                    ) : !formDate ? (
+                      <div className="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+                        {language === 'ar' ? 'الرجاء اختيار تاريخ الحجز لعرض المواعيد المتاحة' : 'Please select a date to view available time slots'}
+                      </div>
+                    ) : adminAvailableTimeSlots.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-red-500 border border-dashed border-slate-800 rounded-2xl font-bold bg-red-500/5">
+                        {language === 'ar' ? 'لا توجد مواعيد متاحة في هذا اليوم أو انتهت ساعات العمل' : 'No available slots for this date or operating hours closed'}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-3 rounded-2xl bg-slate-950/40 border border-slate-800/60 max-h-[160px] overflow-y-auto custom-scrollbar shadow-inner">
+                        {adminAvailableTimeSlots.map((time) => {
+                          const isSelected = adminSelectedTimes.includes(time);
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setAdminSelectedTimes(adminSelectedTimes.filter(t => t !== time));
+                                } else {
+                                  setAdminSelectedTimes([...adminSelectedTimes, time].sort());
+                                }
+                              }}
+                              className={`py-2 text-xs font-bold rounded-lg border transition-all active:scale-[0.93] ${
+                                isSelected 
+                                ? 'border-emerald-500 bg-emerald-600 text-white shadow-md scale-105' 
+                                : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:bg-slate-850'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Financial calculations */}
-                  <div className="grid gap-3 sm:grid-cols-3 p-4 bg-emerald-50/50 dark:bg-emerald-950/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+                  <div className="grid gap-3 sm:grid-cols-3 p-4 bg-emerald-950/10 rounded-[1.5rem] border border-emerald-900/30">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المبلغ الإجمالي (EGP)' : 'Total Price'}</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'المبلغ الإجمالي (EGP)' : 'Total Price'}</label>
                       <input 
                         required
                         type="number" 
                         value={formTotalPrice}
                         onChange={(e) => setFormTotalPrice(e.target.value)}
                         placeholder="200"
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono font-bold"
+                        className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm text-left font-mono font-bold transition-all"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'المبلغ المدفوع / العربون' : 'Amount Paid'}</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'المبلغ المدفوع / العربون' : 'Amount Paid'}</label>
                       <input 
                         required
                         type="number" 
                         value={formAmountPaid}
                         onChange={(e) => setFormAmountPaid(e.target.value)}
                         placeholder="50"
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-primary outline-none text-sm text-left font-mono font-bold"
+                        className="w-full bg-slate-950 border border-slate-800 text-emerald-400 rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm text-left font-mono font-bold transition-all"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-350">{language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</label>
                       <select
                         value={formPaymentMethod}
                         onChange={(e) => setFormPaymentMethod(e.target.value)}
-                        className={`w-full bg-white dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-3 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                        className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-3 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none text-sm transition-all ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
                       >
-                        <option value="instapay">InstaPay</option>
-                        <option value="wallet">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
-                        <option value="cash">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
+                        <option value="instapay" className="bg-slate-900">InstaPay</option>
+                        <option value="wallet" className="bg-slate-900">{language === 'ar' ? 'محفظة إلكترونية' : 'E-Wallet'}</option>
+                        <option value="cash" className="bg-slate-900">{language === 'ar' ? 'كاش (نقدي)' : 'Cash'}</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Special notes */}
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-350">{language === 'ar' ? 'ملاحظات إضافية' : 'Notes / Special Requests'}</label>
+                    <label className="text-sm font-medium text-slate-350 uppercase tracking-wider block">{language === 'ar' ? 'ملاحظات إضافية' : 'Notes / Special Requests'}</label>
                     <textarea
                       value={formNotes}
                       onChange={(e) => setFormNotes(e.target.value)}
                       placeholder={language === 'ar' ? 'ملاحظات بخصوص الكرات، الإضاءة، إلخ...' : 'Any special notes...'}
-                      className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl py-2 px-4 text-slate-850 dark:text-white focus:ring-2 focus:ring-primary outline-none min-h-[60px] text-sm ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                      className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-2 px-4 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none min-h-[60px] text-sm transition-all ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
                     />
                   </div>
 
                   {/* Submit buttons */}
-                  <div className="flex gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex gap-3 pt-4 border-t border-slate-800">
                     <button 
                       type="button" 
-                      onClick={() => setAddBookingOpen(false)}
-                      className="flex-1 py-2.5 rounded-xl border border-slate-250 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-sm font-bold"
+                      onClick={() => {
+                        setAddBookingOpen(false);
+                        setAdminSelectedTimes([]);
+                      }}
+                      className="flex-1 py-3 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white transition-all text-xs font-bold uppercase tracking-wider active:scale-95"
                     >
                       {language === 'ar' ? 'إلغاء' : 'Cancel'}
                     </button>
                     <button 
                       type="submit" 
-                      disabled={formSubmitting}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 text-sm flex items-center justify-center gap-2"
+                      disabled={formSubmitting || adminSelectedTimes.length === 0}
+                      className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 text-xs flex items-center justify-center gap-2 uppercase tracking-wider active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                     >
                       {formSubmitting ? (
                         <>

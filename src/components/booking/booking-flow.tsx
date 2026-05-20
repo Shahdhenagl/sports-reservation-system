@@ -219,44 +219,86 @@ export function BookingFlow() {
   }, []);
 
   useEffect(() => {
-    if (selectedDate && selectedDuration && selectedActivity) {
-      const slots = [];
-      const openTime = selectedActivity.open_time || "08:00";
-      const closeTime = selectedActivity.close_time || "22:00";
+    let active = true;
+    async function loadSlots() {
+      if (selectedDate && selectedDuration && selectedActivity) {
+        const slots = [];
+        const openTime = selectedActivity.open_time || "08:00";
+        const closeTime = selectedActivity.close_time || "22:00";
 
-      const [openH, openM] = openTime.split(':').map(Number);
-      const [closeH, closeM] = closeTime.split(':').map(Number);
+        const [openH, openM] = openTime.split(':').map(Number);
+        const [closeH, closeM] = closeTime.split(':').map(Number);
 
-      const startMinutes = openH * 60 + openM;
-      let endMinutes = closeH * 60 + closeM;
+        const startMinutes = openH * 60 + openM;
+        let endMinutes = closeH * 60 + closeM;
 
-      // Handle overnight hours (e.g. 13:00 to 05:00 next morning)
-      if (endMinutes < startMinutes) {
-        endMinutes += 24 * 60;
-      }
-
-      let currentMinutes = startMinutes;
-
-      const now = new Date();
-      const todayDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const isToday = selectedDate === todayDateString;
-      const currentHourMinutes = now.getHours() * 60 + now.getMinutes();
-
-      while (currentMinutes <= endMinutes) {
-        if (!isToday || currentMinutes > currentHourMinutes) {
-          const adjustedMinutes = currentMinutes % (24 * 60);
-          const h = Math.floor(adjustedMinutes / 60);
-          const m = adjustedMinutes % 60;
-          slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        // Handle overnight hours (e.g. 13:00 to 05:00 next morning)
+        if (endMinutes < startMinutes) {
+          endMinutes += 24 * 60;
         }
-        currentMinutes += selectedDuration;
+
+        let currentMinutes = startMinutes;
+
+        const now = new Date();
+        const todayDateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const isToday = selectedDate === todayDateString;
+        const currentHourMinutes = now.getHours() * 60 + now.getMinutes();
+
+        while (currentMinutes <= endMinutes) {
+          if (!isToday || currentMinutes > currentHourMinutes) {
+            const adjustedMinutes = currentMinutes % (24 * 60);
+            const h = Math.floor(adjustedMinutes / 60);
+            const m = adjustedMinutes % 60;
+            slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+          }
+          currentMinutes += selectedDuration;
+        }
+
+        try {
+          let query = (supabase
+            .from('bookings') as any)
+            .select('booking_time')
+            .eq('booking_date', selectedDate)
+            .eq('activity_id', selectedActivity.id)
+            .neq('status', 'rejected');
+
+          if (!selectedBranch || selectedBranch.id === 'default-branch-id') {
+            query = query.is('branch_id', null);
+          } else {
+            query = query.eq('branch_id', selectedBranch.id);
+          }
+
+          const { data: existingBookings, error } = await query;
+          if (error) throw error;
+
+          if (existingBookings && active) {
+            const occupied = new Set<string>();
+            existingBookings.forEach((b: any) => {
+              if (b.booking_time) {
+                const times = b.booking_time.split(',').map((t: string) => t.trim());
+                times.forEach((t: string) => occupied.add(t));
+              }
+            });
+            const filteredSlots = slots.filter(s => !occupied.has(s));
+            setAvailableTimeSlots(filteredSlots);
+          } else if (active) {
+            setAvailableTimeSlots(slots);
+          }
+        } catch (error) {
+          console.error("Error loading occupied slots:", error);
+          if (active) setAvailableTimeSlots(slots);
+        }
+        setSelectedTimes([]);
+      } else {
+        setAvailableTimeSlots([]);
       }
-      setAvailableTimeSlots(slots);
-      setSelectedTimes([]);
-    } else {
-      setAvailableTimeSlots([]);
     }
-  }, [selectedDate, selectedDuration, selectedActivity]);
+
+    loadSlots();
+    return () => {
+      active = false;
+    };
+  }, [selectedDate, selectedDuration, selectedActivity, selectedBranch]);
 
   // Get today's date string for input min attribute
   const now = new Date();
