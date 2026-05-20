@@ -488,7 +488,7 @@ export default function BookingsPage() {
     
     let nextStatus = selectedBooking.status;
     if (newPaid === 0) {
-      nextStatus = 'pending';
+      nextStatus = 'rejected';
     } else if (newPaid < (selectedBooking.total_price || 0)) {
       nextStatus = 'partially_paid';
     }
@@ -678,7 +678,7 @@ export default function BookingsPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 border border-red-500/20">
             <XCircle className="w-3 h-3" />
-            {language === 'ar' ? 'مرفوض' : 'Rejected'}
+            {language === 'ar' ? 'تم الإلغاء' : 'Cancelled'}
           </span>
         );
       default:
@@ -738,7 +738,7 @@ export default function BookingsPage() {
                 { value: 'pending', label: language === 'ar' ? 'في الانتظار' : 'Pending' },
                 { value: 'partially_paid', label: language === 'ar' ? 'مقبول جزئياً' : 'Partially Paid' },
                 { value: 'approved', label: language === 'ar' ? 'مقبول' : 'Approved' },
-                { value: 'rejected', label: language === 'ar' ? 'مرفوض' : 'Rejected' },
+                { value: 'rejected', label: language === 'ar' ? 'تم الإلغاء' : 'Cancelled' },
               ].map((filter) => (
                 <button
                   key={filter.value}

@@ -79,7 +79,7 @@ export default function CustomersPage() {
     const labels: Record<string, string> = {
       pending: language === 'ar' ? 'في الانتظار' : 'Pending',
       approved: language === 'ar' ? 'مقبول' : 'Approved',
-      rejected: language === 'ar' ? 'مرفوض' : 'Rejected',
+      rejected: language === 'ar' ? 'تم الإلغاء' : 'Cancelled',
     };
     return (
       <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${styles[status] || ''}`}>
