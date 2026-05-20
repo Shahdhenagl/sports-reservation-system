@@ -113,6 +113,20 @@ export function BookingFlow() {
       let customerId;
       if (existingCustomers && existingCustomers.length > 0) {
         customerId = existingCustomers[0].id;
+        
+        // Update customer details to match the latest booking info
+        const { error: updateError } = await (supabase.from('customers') as any)
+          .update({
+            full_name: fullName,
+            whatsapp: whatsappNumber,
+            whatsapp_code: whatsappCode,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', customerId);
+          
+        if (updateError) {
+          console.error("Error updating customer details:", updateError);
+        }
       } else {
         const { data: newCustomer, error: customerError } = await (supabase
           .from('customers') as any)
