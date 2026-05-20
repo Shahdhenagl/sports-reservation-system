@@ -51,7 +51,17 @@ export default function BookingsPage() {
   // Search & Date Filter State
   const [searchTerm, setSearchTerm] = useState("");
   const [periodType, setPeriodType] = useState<"daily" | "monthly" | "yearly">("daily");
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+
+  useEffect(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
+  }, []);
 
   // Form options and values
   const [branches, setBranches] = useState<any[]>([]);
