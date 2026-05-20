@@ -674,8 +674,11 @@ export function BookingFlow() {
                   type="text" 
                   placeholder={t.fullName} 
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} text-foreground text-base sm:text-lg focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all hover:border-primary/30 relative z-0`} 
+                  onChange={(e) => {
+                    const lettersOnly = e.target.value.replace(/[^a-zA-Z\u0600-\u06FF\s]/g, "");
+                    setFullName(lettersOnly);
+                  }}
+                  className={`w-full bg-surface/30 backdrop-blur-md border-2 border-border/50 rounded-2xl py-3.5 sm:py-4 ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} text-foreground text-base sm:text-lg focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all hover:border-primary/40 relative z-0`} 
                   required
                 />
               </div>
@@ -684,11 +687,11 @@ export function BookingFlow() {
               <div className="grid gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.phoneNumber}</label>
-                  <div className="flex gap-2">
+                  <div className="flex bg-surface/30 backdrop-blur-md border-2 border-border/50 hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 rounded-2xl overflow-hidden transition-all">
                     <select 
                       value={phoneCode} 
                       onChange={(e) => setPhoneCode(e.target.value)}
-                      className="w-20 sm:w-24 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-2 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer text-center"
+                      className="w-20 sm:w-24 bg-transparent border-none py-3.5 sm:py-4 px-3 text-foreground text-sm sm:text-base font-bold outline-none cursor-pointer text-center"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -697,12 +700,16 @@ export function BookingFlow() {
                       <option value="+974">+974</option>
                       <option value="+973">+973</option>
                     </select>
+                    <div className="w-px bg-border/50 my-3" />
                     <input 
                       type="tel" 
                       placeholder="123 456 7890" 
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="flex-1 min-w-0 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, "");
+                        setPhoneNumber(digitsOnly);
+                      }}
+                      className="flex-1 bg-transparent border-none py-3.5 sm:py-4 px-4 text-foreground text-base sm:text-lg font-bold outline-none" 
                       required
                     />
                   </div>
@@ -710,11 +717,11 @@ export function BookingFlow() {
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest px-2">{t.whatsappNumber}</label>
-                  <div className="flex gap-2">
+                  <div className="flex bg-surface/30 backdrop-blur-md border-2 border-border/50 hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 rounded-2xl overflow-hidden transition-all">
                     <select 
                       value={whatsappCode} 
                       onChange={(e) => setWhatsappCode(e.target.value)}
-                      className="w-20 sm:w-24 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-2 text-foreground text-sm sm:text-base font-bold focus:border-primary outline-none appearance-none cursor-pointer text-center"
+                      className="w-20 sm:w-24 bg-transparent border-none py-3.5 sm:py-4 px-3 text-foreground text-sm sm:text-base font-bold outline-none cursor-pointer text-center"
                     >
                       <option value="+20">+20</option>
                       <option value="+966">+966</option>
@@ -723,12 +730,16 @@ export function BookingFlow() {
                       <option value="+974">+974</option>
                       <option value="+973">+973</option>
                     </select>
+                    <div className="w-px bg-border/50 my-3" />
                     <input 
                       type="tel" 
                       placeholder="123 456 7890" 
                       value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                      className="flex-1 min-w-0 bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl py-3.5 sm:py-4 px-4 sm:px-6 text-foreground text-base sm:text-lg font-bold focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, "");
+                        setWhatsappNumber(digitsOnly);
+                      }}
+                      className="flex-1 bg-transparent border-none py-3.5 sm:py-4 px-4 text-foreground text-base sm:text-lg font-bold outline-none" 
                       required
                     />
                   </div>
@@ -744,7 +755,7 @@ export function BookingFlow() {
                   placeholder={t.specialRequests} 
                   value={specialRequests}
                   onChange={(e) => setSpecialRequests(e.target.value)}
-                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-xl sm:rounded-2xl ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} py-3.5 sm:py-4 text-foreground text-sm sm:text-base placeholder-muted focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none min-h-[100px] sm:min-h-[120px] transition-all relative z-0`} 
+                  className={`w-full bg-surface/30 border-2 border-border/50 rounded-2xl ${direction === 'rtl' ? 'pr-11 sm:pr-12 pl-4' : 'pl-11 sm:pl-12 pr-4'} py-3.5 sm:py-4 text-foreground text-sm sm:text-base placeholder-muted focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none min-h-[100px] sm:min-h-[120px] transition-all relative z-0`} 
                 />
               </div>
             </div>
